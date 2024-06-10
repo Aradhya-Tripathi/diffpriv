@@ -1,5 +1,5 @@
-/*This is a read only sql parser!*/
-use diffpriv::lexer::Lexer;
+/*This is a read only sql analyzer!*/
+use diffpriv::analyzer::SqlAnalyzer;
 use std::io;
 
 fn main() {
@@ -8,7 +8,6 @@ fn main() {
         .read_line(&mut client_string)
         .expect("Failed to read Input");
 
-    let mut lexer = Lexer::new(client_string.to_owned());
-    let tokens = lexer.parse();
-    println!("{tokens:?}");
+    let analyzer = SqlAnalyzer::new(&client_string);
+    println!("{:?}", analyzer.columns_from_sql());
 }

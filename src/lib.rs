@@ -1,4 +1,1 @@
-pub mod builtins;
-pub mod lexer;
-pub mod symbols;
-pub mod tokens;
+pub mod analyzer;
