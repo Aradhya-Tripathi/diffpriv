@@ -6,7 +6,6 @@ use std::path::Path;
 const URI_PATTERN: &str = r"^mysql:\/\/([^:\/?#]+):([^@\/?#]+)@([^:\/?#]+):(\d+)\/([^\/?#]+)$";
 
 pub struct Database {
-    path: String,
     pub flavour: SupportedDatabases,
     // We are taking control of the connection at this point
     pub connection: ConnectionTypes,
@@ -45,7 +44,6 @@ impl Database {
                 {
                     let connection_pool: Pool = Pool::new(processed_path).unwrap();
                     return Ok(Database {
-                        path: path.to_string(),
                         flavour: SupportedDatabases::MySQL,
                         connection: ConnectionTypes::MySQL(connection_pool),
                     });
@@ -58,7 +56,6 @@ impl Database {
                         let connection: SqliteConnection =
                             SqliteConnection::open(processed_path).unwrap();
                         return Ok(Database {
-                            path: path.to_string(),
                             flavour: SupportedDatabases::SQLite,
                             connection: ConnectionTypes::SQLite(connection),
                         });
