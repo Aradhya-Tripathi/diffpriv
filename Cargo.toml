@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sqlparser = {version = "0.47.0", features = ["visitor"]}
 rand = "0.8.5"
+regex = "1.10.5"
