@@ -1,6 +1,5 @@
 /*This is a read only sql analyzer!*/
 use diffpriv::database::Database;
-// use diffpriv::query::analyzer::SqlAnalyzer;
 
 use std::io;
 
@@ -10,9 +9,9 @@ fn main() {
         .read_line(&mut client_string)
         .expect("Failed to read Input");
 
-    match Database::new(&client_string, "mysql") {
-        Ok(content) => {
-            println!("Connection successful!: {content:?}");
+    match Database::new(&client_string, "sqlite") {
+        Ok(connection) => {
+            println!("Connection successful to {:?}", connection.flavour);
         }
         Err(msg) => {
             println!("ERROR: {msg}");
