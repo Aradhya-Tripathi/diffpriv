@@ -9,5 +9,6 @@ fn main() {
         .expect("Failed to read Input");
 
     let analyzer = SqlAnalyzer::new(&client_string);
-    println!("{:?}", analyzer.columns_from_sql());
+    println!("Columns: {:?}", analyzer.columns_from_sql());
+    println!("Tables: {:?}", analyzer.tables_from_sql());
 }

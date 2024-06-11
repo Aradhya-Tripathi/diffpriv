@@ -2,26 +2,6 @@ pub struct SqlAnalyzer {
     pub sql: String,
 }
 
-trait Cleanable {
-    fn clean(&self) -> String;
-}
-
-fn clean_results(res: &str) -> String {
-    res.replace(" ", "").replace(",", "").replace(";", "")
-}
-
-impl Cleanable for String {
-    fn clean(&self) -> String {
-        clean_results(self.as_str())
-    }
-}
-
-impl Cleanable for &str {
-    fn clean(&self) -> String {
-        clean_results(self)
-    }
-}
-
 impl SqlAnalyzer {
     pub fn new(sql: &str) -> Self {
         SqlAnalyzer {
@@ -29,10 +9,15 @@ impl SqlAnalyzer {
         }
     }
 
-    fn clean_results<T: Cleanable>(&self, results: Vec<T>) -> Vec<String> {
+    fn clean_results(&self, results: Vec<String>) -> Vec<String> {
         results
             .iter()
-            .map(|r: &T| r.clean())
+            .map(|r: &String| {
+                r.trim_end()
+                    .replace(" ", "")
+                    .replace(",", "")
+                    .replace(";", "")
+            })
             .collect::<Vec<String>>()
     }
 
@@ -43,17 +28,20 @@ impl SqlAnalyzer {
     pub fn tables_from_sql(&self) -> Vec<String> {
         let mut tables: Vec<String> = vec![];
         let parts = self.sql.split_whitespace().collect::<Vec<&str>>();
-        let terminals: Vec<&str> = vec!["where", "group", "having", "order"];
+        let terminals: Vec<&str> = vec!["where", "group", "having", "order", "on"];
 
-        if let Some(position) = parts.iter().position(|&r| r == "from") {
-            for index in position + 1..parts.len() {
-                if terminals.contains(&parts[index]) {
-                    break;
-                }
+        let position = parts
+            .iter()
+            .position(|&r| r == "from")
+            .expect("Invalid read sql");
+
+        for index in position + 1..parts.len() {
+            if terminals.contains(&parts[index]) {
+                break;
+            }
+            if parts[index] != "join" {
                 tables.push(parts[index].to_string());
             }
-        } else {
-            panic!("Invalid READ SQL")
         }
 
         // Handling alises is challening in this case, however we can do that when we run the SQL query.
@@ -72,7 +60,6 @@ impl SqlAnalyzer {
             columns.push(parts[index].to_owned());
             index += 1;
         }
-
         self.clean_results(columns)
     }
 }
@@ -116,5 +103,37 @@ mod tests {
             ["avg(name)", "sum(age)"].to_vec(),
             analyser.columns_from_sql()
         );
+    }
+
+    #[test]
+    fn tables_in_join() {
+        let analyzer = SqlAnalyzer::new(
+            "SELECT Employees.EmployeeID, Employees.FirstName,
+            Employees.LastName, Departments.DepartmentName FROM
+            Employees JOIN Departments ON Employees.DepartmentID = Departments.DepartmentID;",
+        );
+        assert_eq!(
+            ["employees", "departments"].to_vec(),
+            analyzer.tables_from_sql()
+        );
+    }
+
+    #[test]
+    fn columns_in_join() {
+        let analyzer = SqlAnalyzer::new(
+            "SELECT Employees.EmployeeID,
+            Employees.FirstName, Employees.LastName, Departments.DepartmentName FROM
+            Employees JOIN Departments ON Employees.DepartmentID = Departments.DepartmentID;",
+        );
+        assert_eq!(
+            [
+                "employees.employeeid",
+                "employees.firstname",
+                "employees.lastname",
+                "departments.departmentname"
+            ]
+            .to_vec(),
+            analyzer.columns_from_sql()
+        )
     }
 }
