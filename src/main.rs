@@ -1,5 +1,5 @@
 /*This is a read only sql analyzer!*/
-use diffpriv::analyzer::SqlAnalyzer;
+use diffpriv::query::analyzer::SqlAnalyzer;
 use std::io;
 
 fn main() {
