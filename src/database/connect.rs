@@ -1,6 +1,7 @@
 use mysql::Pool;
+use mysql::PooledConn;
 use regex::Regex;
-use sqlite::Connection as SqliteConnection;
+use rusqlite::Connection as SqliteConnection;
 use std::path::Path;
 
 const URI_PATTERN: &str = r"^mysql:\/\/([^:\/?#]+):([^@\/?#]+)@([^:\/?#]+):(\d+)\/([^\/?#]+)$";
@@ -19,7 +20,7 @@ pub enum SupportedDatabases {
 
 pub enum ConnectionTypes {
     SQLite(SqliteConnection),
-    MySQL(Pool),
+    MySQL(PooledConn),
 }
 
 impl SupportedDatabases {
@@ -42,7 +43,8 @@ impl Database {
                     .captures(processed_path)
                     .is_some()
                 {
-                    let connection_pool: Pool = Pool::new(processed_path).unwrap();
+                    let connection_pool: PooledConn =
+                        Pool::new(processed_path).unwrap().get_conn().unwrap();
                     return Ok(Database {
                         flavour: SupportedDatabases::MySQL,
                         connection: ConnectionTypes::MySQL(connection_pool),
