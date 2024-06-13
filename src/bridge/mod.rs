@@ -21,3 +21,8 @@ pub fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
 
     used_columns
 }
+
+pub fn set_sensitivity(mut column: Column, sensitivity: f64) -> Column {
+    column.sensitivity = sensitivity;
+    column
+}
