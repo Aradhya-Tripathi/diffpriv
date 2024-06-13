@@ -1,4 +1,5 @@
 use crate::database::connect::ConnectionTypes;
+use crate::database::connect::Database;
 use mysql::prelude::Queryable;
 
 pub struct Schema {
@@ -19,8 +20,8 @@ pub struct Column {
 }
 
 impl Schema {
-    pub fn from_connection(conn: ConnectionTypes) {
-        match conn {
+    pub fn from_connection(conn: Database) -> Vec<Table> {
+        match conn.connection {
             ConnectionTypes::MySQL(mut connector) => {
                 let current_db = connector
                     .query_first::<String, &str>("SELECT Database()")
@@ -53,6 +54,7 @@ impl Schema {
 
                     tables.push(Table { name, columns })
                 }
+                return tables;
             }
 
             ConnectionTypes::SQLite(connector) => {
@@ -64,7 +66,7 @@ impl Schema {
                     .unwrap()
                     .map(|res| res.unwrap())
                     .collect::<Vec<String>>();
-                let mut tables: Vec<Column> = vec![];
+                let mut tables: Vec<Table> = vec![];
                 for table_name in table_names {
                     let mut column_stmt = connector
                         .prepare(format!("PRAGMA table_info({table_name})").as_str())
@@ -78,10 +80,22 @@ impl Schema {
                             });
                         })
                         .unwrap();
-                    for column in columns {
-                        tables.push(column.unwrap())
-                    }
+                    tables.push(Table {
+                        name: table_name,
+                        columns: columns
+                            .into_iter()
+                            .map(|column| {
+                                let mut column = column.unwrap();
+                                if column.ctype == "" {
+                                    // Column affinity towards Varchar
+                                    column.ctype = "Varchar".to_string();
+                                }
+                                column
+                            })
+                            .collect::<Vec<Column>>(),
+                    });
                 }
+                return tables;
             }
         }
     }
