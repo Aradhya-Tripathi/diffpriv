@@ -1,3 +1,4 @@
+use mysql::prelude::Queryable;
 use mysql::Pool;
 use mysql::PooledConn;
 use regex::Regex;
@@ -52,7 +53,18 @@ impl Database {
         }
         Err(format!("Failed to process database URI: {processed_path}"))
     }
-    pub fn execute_query(&self, sql: &str) {
-        println!("Running {} on {}", sql, self);
+    pub fn execute_query(&mut self, sql: &str) {
+        match &mut self.connection {
+            ConnectionTypes::MySQL(ref mut connector) => {
+                connector.query::<String, &str>(sql).unwrap();
+            }
+            ConnectionTypes::SQLite(connector) => {
+                let mut query_stmt = connector.prepare(sql).unwrap();
+                let _ = query_stmt.query([]).unwrap();
+                // while let Some(row) = rows.next().unwrap() {
+                //     println!("{row:?}");
+                // }
+            }
+        }
     }
 }

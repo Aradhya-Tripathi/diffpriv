@@ -1,3 +1,5 @@
+use core::fmt;
+
 use crate::database::connect::ConnectionTypes;
 use crate::database::connect::Database;
 use mysql::prelude::Queryable;
@@ -10,6 +12,12 @@ pub struct Schema {
 pub struct Table {
     pub name: String,
     pub columns: Vec<Column>,
+}
+
+impl fmt::Display for Table {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {:?}", self.name, self.columns)
+    }
 }
 
 #[derive(Debug)]

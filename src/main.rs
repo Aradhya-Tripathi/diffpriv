@@ -9,10 +9,15 @@ pub fn main() {
     let mut database_uri = String::new();
     io::stdin().read_line(&mut database_uri).unwrap();
     let mut database_connection = Database::new(&database_uri).unwrap();
+    println!("Using database type: {database_connection}");
 
     println!("Generating database schema...");
 
-    let _database_tables = Schema::from_connection(&mut database_connection);
+    let database_tables = Schema::from_connection(&mut database_connection);
+    for table in database_tables {
+        print!("{} ", table);
+    }
+    println!();
 
     loop {
         let mut query = String::new();
@@ -30,3 +35,5 @@ pub fn main() {
         database_connection.execute_query(&query);
     }
 }
+
+// mysql://root:MARIADBPASSWORD@127.0.0.1:3306/test
