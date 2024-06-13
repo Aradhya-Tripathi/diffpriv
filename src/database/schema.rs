@@ -20,11 +20,12 @@ impl fmt::Display for Table {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Column {
     pub name: String,
     pub ctype: String,
     pub sensitivity: f64,
+    pub usage: Option<String>,
 }
 
 impl Schema {
@@ -58,6 +59,7 @@ impl Schema {
                             name: column_name,
                             ctype: data_type,
                             sensitivity: 0.0, // To be decided!
+                            usage: None,
                         })
                         .unwrap();
 
@@ -86,6 +88,7 @@ impl Schema {
                                 name: row.get::<_, String>(1).unwrap(),
                                 ctype: row.get::<_, String>(2).unwrap(),
                                 sensitivity: 0.0,
+                                usage: None,
                             });
                         })
                         .unwrap();

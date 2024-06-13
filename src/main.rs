@@ -1,3 +1,4 @@
+use diffpriv::bridge::used_columns;
 use diffpriv::database::connect::Database;
 use diffpriv::database::schema::Schema;
 use diffpriv::query::analyzer;
@@ -14,10 +15,6 @@ pub fn main() {
     println!("Generating database schema...");
 
     let database_tables = Schema::from_connection(&mut database_connection);
-    for table in database_tables {
-        print!("{} ", table);
-    }
-    println!();
 
     loop {
         let mut query = String::new();
@@ -25,15 +22,14 @@ pub fn main() {
         io::stdout().flush().unwrap();
         io::stdin().read_line(&mut query).unwrap();
         let analyzer = analyzer::SqlAnalyzer::new(&query);
-
-        println!(
-            "tables: {:?} columns: {:?}",
-            analyzer.tables_from_sql(),
-            analyzer.columns_from_sql()
+        let used_columns = used_columns(
+            analyzer.columns_from_sql(),
+            database_tables
+                .iter()
+                .flat_map(|table| table.columns.clone())
+                .collect(),
         );
-
-        database_connection.execute_query(&query);
+        println!("{used_columns:?}");
+        // database_connection.execute_query(&query);
     }
 }
-
-// mysql://root:MARIADBPASSWORD@127.0.0.1:3306/test
