@@ -9,13 +9,12 @@ const URI_PATTERN: &str = r"^mysql:\/\/([^:\/?#]+):([^@\/?#]+)@([^:\/?#]+):(\d+)
 
 pub struct Database {
     pub flavour: SupportedDatabases,
-    // We are taking control of the connection at this point
     pub connection: ConnectionTypes,
 }
 
 impl fmt::Display for Database {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Connected to {:?}", self.flavour)
+        write!(f, "{:?}", self.flavour)
     }
 }
 
@@ -28,16 +27,6 @@ pub enum SupportedDatabases {
 pub enum ConnectionTypes {
     SQLite(SqliteConnection),
     MySQL(PooledConn),
-}
-
-impl SupportedDatabases {
-    pub fn from_string(flavour: &str) -> Self {
-        match flavour.to_ascii_lowercase().as_str() {
-            "sqlite" => Self::SQLite,
-            "mysql" => Self::MySQL,
-            _ => panic!("{flavour} not supported!"),
-        }
-    }
 }
 
 impl Database {
@@ -62,5 +51,8 @@ impl Database {
             });
         }
         Err(format!("Failed to process database URI: {processed_path}"))
+    }
+    pub fn execute_query(&self, sql: &str) {
+        println!("Running {} on {}", sql, self);
     }
 }

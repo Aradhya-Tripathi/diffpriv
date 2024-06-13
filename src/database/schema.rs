@@ -20,9 +20,10 @@ pub struct Column {
 }
 
 impl Schema {
-    pub fn from_connection(conn: Database) -> Vec<Table> {
-        match conn.connection {
-            ConnectionTypes::MySQL(mut connector) => {
+    pub fn from_connection(conn: &mut Database) -> Vec<Table> {
+        match &mut conn.connection {
+            // Only borrowing the connector and not moving it!
+            ConnectionTypes::MySQL(ref mut connector) => {
                 let current_db = connector
                     .query_first::<String, &str>("SELECT Database()")
                     .unwrap()

@@ -1,5 +1,5 @@
-use diffpriv::database::connect;
-use diffpriv::database::schema;
+use diffpriv::database::connect::Database;
+use diffpriv::database::schema::Schema;
 use diffpriv::query::analyzer;
 use std::io::{self, Write};
 
@@ -8,11 +8,11 @@ pub fn main() {
     io::stdout().flush().unwrap();
     let mut database_uri = String::new();
     io::stdin().read_line(&mut database_uri).unwrap();
-    let database_connection = connect::Database::new(&database_uri).unwrap();
+    let mut database_connection = Database::new(&database_uri).unwrap();
 
     println!("Generating database schema...");
 
-    let _database_tables = schema::Schema::from_connection(database_connection);
+    let _database_tables = Schema::from_connection(&mut database_connection);
 
     loop {
         let mut query = String::new();
@@ -26,5 +26,7 @@ pub fn main() {
             analyzer.tables_from_sql(),
             analyzer.columns_from_sql()
         );
+
+        database_connection.execute_query(&query);
     }
 }
