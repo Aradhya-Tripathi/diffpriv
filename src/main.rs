@@ -1,5 +1,5 @@
 use diffpriv::bridge::used_columns;
-use diffpriv::database::connect::Database;
+use diffpriv::database::database::Database;
 use diffpriv::database::schema::Schema;
 use diffpriv::query::analyzer;
 
@@ -15,7 +15,7 @@ pub fn main() {
     let mut database_uri = String::new();
     io::stdin().read_line(&mut database_uri).unwrap();
     let mut database_connection = Database::new(&database_uri).unwrap();
-    println!("Using database type: {database_connection}");
+    println!("{database_connection}");
 
     println!("Generating database schema...");
 
@@ -31,7 +31,7 @@ pub fn main() {
             let sensitivity = sensitivity.trim().parse::<f64>();
             match sensitivity {
                 Ok(value) => column.sensitivity = value,
-                Err(e) => eprintln!("Error parsing sensitivity: {:?}", e),
+                Err(_) => eprintln!("Error parsing sensitivity falling back to default 0.0"),
             }
         });
     }
