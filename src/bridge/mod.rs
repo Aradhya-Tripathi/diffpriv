@@ -5,6 +5,11 @@ pub fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
     let aggregate_functions: Vec<&str> = vec!["sum(", "avg("];
     let mut index = 0;
 
+    if requested.contains(&"*".to_string()) {
+        // Wildcard should mean we are queries everything.
+        return existing;
+    }
+
     while index < existing.len() {
         for func in aggregate_functions.iter() {
             if requested.contains(&format!("{func}{})", existing[index].name)) {
@@ -20,9 +25,4 @@ pub fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
     }
 
     used_columns
-}
-
-pub fn set_sensitivity(mut column: Column, sensitivity: f64) -> Column {
-    column.sensitivity = sensitivity;
-    column
 }
