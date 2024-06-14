@@ -1,10 +1,12 @@
 use mysql::prelude::Queryable;
-use mysql::Pool;
-use mysql::PooledConn;
+use mysql::{Pool, PooledConn, Row, Value};
 use regex::Regex;
+use rusqlite::types::ValueRef;
 use rusqlite::Connection as SqliteConnection;
+use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
+use std::str;
 
 const URI_PATTERN: &str = r"^mysql:\/\/([^:\/?#]+):([^@\/?#]+)@([^:\/?#]+):(\d+)\/([^\/?#]+)$";
 
@@ -56,14 +58,49 @@ impl Database {
     pub fn execute_query(&mut self, sql: &str) {
         match &mut self.connection {
             ConnectionTypes::MySQL(ref mut connector) => {
-                connector.query::<String, &str>(sql).unwrap();
+                // Why have they made it so hard to work with databases in rust?
+                let rows: Vec<Row> = connector.query(sql).unwrap();
+                let results: Vec<HashMap<String, Value>> = rows
+                    .iter()
+                    .map(|row| {
+                        let mut column_value_map = HashMap::new();
+                        for (i, column) in row.columns().iter().enumerate() {
+                            let column_name = column.name_str().into_owned();
+                            let value = row.as_ref(i).unwrap();
+                            column_value_map.insert(column_name, value.clone());
+                        }
+                        column_value_map
+                    })
+                    .collect();
+                println!("{results:?}");
             }
             ConnectionTypes::SQLite(connector) => {
                 let mut query_stmt = connector.prepare(sql).unwrap();
-                let _ = query_stmt.query([]).unwrap();
-                // while let Some(row) = rows.next().unwrap() {
-                //     println!("{row:?}");
-                // }
+                let column_count = query_stmt.column_count();
+                let column_names = query_stmt
+                    .column_names()
+                    .iter()
+                    .map(|r| r.to_string())
+                    .collect::<Vec<String>>();
+                let mut rows = query_stmt.query([]).unwrap();
+                let mut results: Vec<HashMap<String, Value>> = vec![];
+                while let Some(row) = rows.next().unwrap() {
+                    for i in 0..column_count {
+                        let mut column_value_map: HashMap<String, Value> = HashMap::new();
+                        // Since ValueRef type only lives as long as the row lives,
+                        // The next iteration the row dies therefore we need a owned value.
+                        let row_value = match row.get_ref(i).unwrap() {
+                            ValueRef::Null => Value::NULL,
+                            ValueRef::Real(val) => Value::Double(val),
+                            ValueRef::Blob(val) => Value::Bytes(val.to_owned()),
+                            ValueRef::Integer(val) => Value::Int(val),
+                            ValueRef::Text(val) => Value::Bytes(val.to_owned()),
+                        };
+                        column_value_map.insert(column_names[i].to_owned(), row_value);
+                        results.push(column_value_map.to_owned());
+                    }
+                }
+                println!("{results:?}");
             }
         }
     }
