@@ -1,2 +1,2 @@
-pub mod connect;
+pub mod database;
 pub mod schema;

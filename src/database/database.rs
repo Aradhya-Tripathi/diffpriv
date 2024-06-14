@@ -17,7 +17,7 @@ pub struct Database {
 
 impl fmt::Display for Database {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.flavour)
+        write!(f, "Connected to {:?}", self.flavour)
     }
 }
 
@@ -97,7 +97,7 @@ impl Database {
                             ValueRef::Text(val) => Value::Bytes(val.to_owned()),
                         };
                         column_value_map.insert(column_names[i].to_owned(), row_value);
-                        results.push(column_value_map.to_owned());
+                        results.push(column_value_map);
                     }
                 }
                 println!("{results:?}");

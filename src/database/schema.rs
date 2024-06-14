@@ -1,7 +1,7 @@
 use core::fmt;
 
-use crate::database::connect::ConnectionTypes;
-use crate::database::connect::Database;
+use crate::database::database::ConnectionTypes;
+use crate::database::database::Database;
 use mysql::prelude::Queryable;
 
 pub struct Schema {
