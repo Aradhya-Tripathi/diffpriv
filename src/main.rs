@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::io::{self, Write};
 
 /// Identifies and returns the columns used in the requested query.
+/// Essentially `Column` construction from the requested columns detected
 ///
 /// # Arguments
 ///
@@ -22,7 +23,7 @@ use std::io::{self, Write};
 /// # Returns
 ///
 /// A vector of columns that are used in the query.
-fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
+fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
     let mut used_columns: Vec<Column> = vec![];
     let aggregate_functions: Vec<&str> = vec!["sum(", "avg("];
     let mut index = 0;
@@ -48,7 +49,6 @@ fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column
 
     used_columns
 }
-
 /// Applies Laplace transforms to the query results based on column sensitivity.
 ///
 /// # Arguments
@@ -62,11 +62,16 @@ fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column
 fn apply_transforms(
     used_columns: Vec<Column>,
     query_result: Vec<HashMap<String, String>>,
+    privacy_budget_map: &HashMap<String, f64>,
 ) -> Vec<f64> {
     // Test function!
     // If usage does not exist that means this query is not trying to get the
     // average of a perticular row, instead it's query the whole row or something else
     // which in any case is not allowed!
+    // let table_in_question = used_tables
+    //     .iter()
+    //     .find(|table| table.columns == used_columns)
+    //     .unwrap();
     let usage_to_column: HashMap<&String, &Column> = used_columns
         .iter()
         .filter_map(|column| column.usage.as_ref().map(|usage| (usage, column)))
@@ -82,7 +87,14 @@ fn apply_transforms(
                         .expect("Illegal usage no aggregate used on this column!");
                     // This will later be removed and we will have
                     // A strict query checker before the query is actually executed!
-                    laplace_transform(true_value, column.sensitivity)
+                    laplace_transform(
+                        true_value,
+                        column.sensitivity,
+                        privacy_budget_map
+                            .get::<String>(&column.table_name)
+                            .unwrap()
+                            .clone(),
+                    )
                 })
             })
         })
@@ -102,7 +114,8 @@ fn main() {
     println!("Generating database schema...");
     let mut database_tables = Schema::from_connection(&mut database_connection);
 
-    // Setting sensitivity for each column in all the tables.
+    let mut privacy_budget_map = HashMap::new();
+    // Setting sensitivity for each column in all the tables and the table privacy budget.
     for table in database_tables.iter_mut() {
         println!("Setting configurations for {}", table.name);
         table.columns.iter_mut().for_each(|column| {
@@ -116,6 +129,18 @@ fn main() {
                 Err(_) => eprintln!("Error parsing sensitivity falling back to default 0.0"),
             }
         });
+        let mut privacy_budget = String::new();
+        print!("Enter privacy budget for {}: ", table.name);
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut privacy_budget).unwrap();
+        let table_privacy = match privacy_budget.trim().parse::<f64>() {
+            Ok(value) => value,
+            Err(_) => {
+                eprintln!("Error parsing privacy budget falling back to default 0.0");
+                0.0
+            }
+        };
+        privacy_budget_map.insert(table.name.clone(), table_privacy);
     }
 
     println!("-------END CONFIGURATION-------");
@@ -128,14 +153,18 @@ fn main() {
 
         let analyzer = analyzer::SqlAnalyzer::new(&query);
         let requested_columns = analyzer.columns_from_sql();
+        // let requested_tables = analyzer.tables_from_sql();
         let existing_columns = database_tables
             .iter()
             .flat_map(|table| table.columns.clone())
             .collect();
 
-        let used_columns = used_columns(requested_columns, existing_columns);
+        let used_columns = get_used_columns(requested_columns, existing_columns);
+        // Sensitivity issue now new columns have a sensitivity setting however old table columns don't!
+
         let query_result = database_connection.execute_query(&query);
-        let transformed_query_results = apply_transforms(used_columns, query_result);
+        let transformed_query_results =
+            apply_transforms(used_columns, query_result, &privacy_budget_map);
 
         println!("{:?}", transformed_query_results);
     }
