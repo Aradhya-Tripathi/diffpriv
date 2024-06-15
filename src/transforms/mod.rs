@@ -11,9 +11,7 @@ fn add_laplace_noise(true_value: f64, sensitivity: f64, epsilon: f64) -> f64 {
     true_value + noise
 }
 
-pub fn transform(true_value: f64, sensitivity: f64) -> f64 {
+pub fn laplace_transform(true_value: f64, sensitivity: f64) -> f64 {
     let epsilon = 0.1; // Privacy Budget - User defined however for now we just define it to test things out
-
-    let noisy = add_laplace_noise(true_value, sensitivity, epsilon);
-    noisy
+    add_laplace_noise(true_value, sensitivity, epsilon)
 }

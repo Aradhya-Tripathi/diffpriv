@@ -9,7 +9,7 @@ unwanted query runs (which will be implemented later right now we have access to
 use diffpriv::database::database::Database;
 use diffpriv::database::schema::{Column, Schema};
 use diffpriv::query::analyzer;
-use diffpriv::transforms::transform;
+use diffpriv::transforms::laplace_transform;
 
 use std::collections::HashMap;
 use std::io::{self, Write};
@@ -64,7 +64,7 @@ fn apply_transforms(
                         .expect("Illegal usage no aggregate used on this column!");
                     // This will later be removed and we will have
                     // A strict query checker before the query is actually executed!
-                    transform(true_value, column.sensitivity)
+                    laplace_transform(true_value, column.sensitivity)
                 })
             })
         })
