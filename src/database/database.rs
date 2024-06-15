@@ -69,7 +69,9 @@ impl Database {
                         for (i, column) in row.columns().iter().enumerate() {
                             let column_name = column.name_str().into_owned();
                             let value = row.as_ref(i).unwrap().to_owned();
-                            column_value_map.insert(column_name, value.as_sql(false));
+                            // For some reason some of the returned values have "'"
+                            column_value_map
+                                .insert(column_name, value.as_sql(true).replace("'", ""));
                         }
                         column_value_map
                     })
