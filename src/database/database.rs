@@ -1,5 +1,5 @@
 use mysql::prelude::Queryable;
-use mysql::{Pool, PooledConn, Row, Value};
+use mysql::{Pool, PooledConn, Row};
 use regex::Regex;
 use rusqlite::types::ValueRef;
 use rusqlite::Connection as SqliteConnection;
@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::Path;
 use std::str;
-
 const URI_PATTERN: &str = r"^mysql:\/\/([^:\/?#]+):([^@\/?#]+)@([^:\/?#]+):(\d+)\/([^\/?#]+)$";
 
 pub struct Database {
@@ -55,24 +54,27 @@ impl Database {
         }
         Err(format!("Failed to process database URI: {processed_path}"))
     }
-    pub fn execute_query(&mut self, sql: &str) {
+    /// Executes SQL query and gives any sort of response in simple String format
+    /// Makes it easy to work with since String can be converted into required form for transforms
+    pub fn execute_query(&mut self, sql: &str) -> Vec<HashMap<String, String>> {
         match &mut self.connection {
             ConnectionTypes::MySQL(ref mut connector) => {
                 // Why have they made it so hard to work with databases in rust?
                 let rows: Vec<Row> = connector.query(sql).unwrap();
-                let results: Vec<HashMap<String, Value>> = rows
+                let results: Vec<HashMap<String, String>> = rows
                     .iter()
                     .map(|row| {
+                        // Why the fuck is everything interpreted as bytes?
                         let mut column_value_map = HashMap::new();
                         for (i, column) in row.columns().iter().enumerate() {
                             let column_name = column.name_str().into_owned();
-                            let value = row.as_ref(i).unwrap();
-                            column_value_map.insert(column_name, value.clone());
+                            let value = row.as_ref(i).unwrap().to_owned();
+                            column_value_map.insert(column_name, value.as_sql(false));
                         }
                         column_value_map
                     })
                     .collect();
-                println!("{results:?}");
+                results
             }
             ConnectionTypes::SQLite(connector) => {
                 let mut query_stmt = connector.prepare(sql).unwrap();
@@ -83,24 +85,28 @@ impl Database {
                     .map(|r| r.to_string())
                     .collect::<Vec<String>>();
                 let mut rows = query_stmt.query([]).unwrap();
-                let mut results: Vec<HashMap<String, Value>> = vec![];
+                let mut results: Vec<HashMap<String, String>> = vec![];
                 while let Some(row) = rows.next().unwrap() {
+                    let mut column_val_map = HashMap::new();
                     for i in 0..column_count {
-                        let mut column_value_map: HashMap<String, Value> = HashMap::new();
                         // Since ValueRef type only lives as long as the row lives,
                         // The next iteration the row dies therefore we need a owned value.
                         let row_value = match row.get_ref(i).unwrap() {
-                            ValueRef::Null => Value::NULL,
-                            ValueRef::Real(val) => Value::Double(val),
-                            ValueRef::Blob(val) => Value::Bytes(val.to_owned()),
-                            ValueRef::Integer(val) => Value::Int(val),
-                            ValueRef::Text(val) => Value::Bytes(val.to_owned()),
+                            ValueRef::Null => "Null".to_string(),
+                            ValueRef::Real(val) => format!("{}", val),
+                            ValueRef::Blob(val) => {
+                                format!("{}", std::str::from_utf8(val).unwrap().to_string())
+                            }
+                            ValueRef::Integer(val) => format!("{}", val),
+                            ValueRef::Text(val) => {
+                                format!("{}", std::str::from_utf8(val).unwrap())
+                            }
                         };
-                        column_value_map.insert(column_names[i].to_owned(), row_value);
-                        results.push(column_value_map);
+                        column_val_map.insert(column_names[i].to_owned(), row_value);
                     }
+                    results.push(column_val_map.to_owned());
                 }
-                println!("{results:?}");
+                results
             }
         }
     }
