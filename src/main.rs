@@ -1,11 +1,9 @@
 /*
-All these configurations will later be stored somewhere
-Once I decide on the interface I want to use to interact with this
-for now on boot all fields need to filled.
-We are also analyzing the query before running it to disallow
-unwanted query runs (which will be implemented later right now we have access to everything)
+Configurations will later be stored permanently once the interface for interaction is decided.
+For now, all fields need to be filled on boot.
+We will also be analyzing the query before running it to disallow unwanted query runs.
+Currently, we have access to everything, but strict query checking will be implemented later.
 */
-
 use diffpriv::database::database::Database;
 use diffpriv::database::schema::{Column, Schema};
 use diffpriv::query::analyzer;
@@ -14,6 +12,16 @@ use diffpriv::transforms::laplace_transform;
 use std::collections::HashMap;
 use std::io::{self, Write};
 
+/// Identifies and returns the columns used in the requested query.
+///
+/// # Arguments
+///
+/// * `requested` - A vector of strings representing the requested columns or functions.
+/// * `existing` - A vector of existing columns in the database.
+///
+/// # Returns
+///
+/// A vector of columns that are used in the query.
 fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
     let mut used_columns: Vec<Column> = vec![];
     let aggregate_functions: Vec<&str> = vec!["sum(", "avg("];
@@ -41,6 +49,16 @@ fn used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column
     used_columns
 }
 
+/// Applies Laplace transforms to the query results based on column sensitivity.
+///
+/// # Arguments
+///
+/// * `used_columns` - A vector of columns that are used in the query.
+/// * `query_result` - A vector of hashmaps representing the query result rows.
+///
+/// # Returns
+///
+/// A vector of f64 representing the transformed query results.
 fn apply_transforms(
     used_columns: Vec<Column>,
     query_result: Vec<HashMap<String, String>>,
@@ -75,15 +93,16 @@ fn main() {
     println!("------CONFIGURATION-------");
     print!("Database Path/URI> ");
     io::stdout().flush().unwrap();
+
     let mut database_uri = String::new();
     io::stdin().read_line(&mut database_uri).unwrap();
     let mut database_connection = Database::new(&database_uri).unwrap();
     println!("{database_connection}");
 
     println!("Generating database schema...");
-
     let mut database_tables = Schema::from_connection(&mut database_connection);
 
+    // Setting sensitivity for each column in all the tables.
     for table in database_tables.iter_mut() {
         println!("Setting configurations for {}", table.name);
         table.columns.iter_mut().for_each(|column| {
@@ -108,14 +127,16 @@ fn main() {
         io::stdin().read_line(&mut query).unwrap();
 
         let analyzer = analyzer::SqlAnalyzer::new(&query);
-        let used_columns = used_columns(
-            analyzer.columns_from_sql(),
-            database_tables
-                .iter()
-                .flat_map(|table| table.columns.clone())
-                .collect(),
-        );
+        let requested_columns = analyzer.columns_from_sql();
+        let existing_columns = database_tables
+            .iter()
+            .flat_map(|table| table.columns.clone())
+            .collect();
+
+        let used_columns = used_columns(requested_columns, existing_columns);
         let query_result = database_connection.execute_query(&query);
-        println!("{:?}", apply_transforms(used_columns, query_result));
+        let transformed_query_results = apply_transforms(used_columns, query_result);
+
+        println!("{:?}", transformed_query_results);
     }
 }
