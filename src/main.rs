@@ -68,10 +68,6 @@ fn apply_transforms(
     // If usage does not exist that means this query is not trying to get the
     // average of a perticular row, instead it's query the whole row or something else
     // which in any case is not allowed!
-    // let table_in_question = used_tables
-    //     .iter()
-    //     .find(|table| table.columns == used_columns)
-    //     .unwrap();
     let usage_to_column: HashMap<&String, &Column> = used_columns
         .iter()
         .filter_map(|column| column.usage.as_ref().map(|usage| (usage, column)))
@@ -160,8 +156,6 @@ fn main() {
             .collect();
 
         let used_columns = get_used_columns(requested_columns, existing_columns);
-        // Sensitivity issue now new columns have a sensitivity setting however old table columns don't!
-
         let query_result = database_connection.execute_query(&query);
         let transformed_query_results =
             apply_transforms(used_columns, query_result, &privacy_budget_map);
