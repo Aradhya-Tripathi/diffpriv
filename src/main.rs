@@ -49,27 +49,26 @@ fn apply_transforms(
     // If usage does not exist that means this query is not trying to get the
     // average of a perticular row, instead it's query the whole row or something else
     // which in any case is not allowed!
-    let mut transformed_results: Vec<f64> = vec![];
+    let usage_to_column: HashMap<&String, &Column> = used_columns
+        .iter()
+        .filter_map(|column| column.usage.as_ref().map(|usage| (usage, column)))
+        .collect();
 
-    for result in query_result {
-        for (k, v) in result {
-            let found_column = used_columns
-                .iter()
-                .find(|column| {
-                    column
-                        .usage
-                        .to_owned()
-                        .expect("Illegal usage no aggregate used on this column!")
+    query_result
+        .into_iter()
+        .flat_map(|result| {
+            result.into_iter().filter_map(|(k, v)| {
+                usage_to_column.get(&k).map(|&column| {
+                    let true_value = v
+                        .parse::<f64>()
+                        .expect("Illegal usage no aggregate used on this column!");
                     // This will later be removed and we will have
                     // A strict query checker before the query is actually executed!
-                        == k
+                    transform(true_value, column.sensitivity)
                 })
-                .unwrap();
-            let true_value = v.parse::<f64>().unwrap(); // This will always work since we are only allowing aggregate queries
-            transformed_results.push(transform(true_value, found_column.sensitivity));
-        }
-    }
-    transformed_results
+            })
+        })
+        .collect()
 }
 
 fn main() {
