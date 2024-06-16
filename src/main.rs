@@ -12,6 +12,8 @@ use diffpriv::transforms::laplace_transform;
 use std::collections::HashMap;
 use std::io::{self, Write};
 
+static SUPPORTED_AGGREGATIONS: [&str; 3] = ["avg(", "sum(", "count("];
+
 /// Identifies and returns the columns used in the requested query.
 /// Essentially `Column` construction from the requested columns detected
 ///
@@ -25,7 +27,7 @@ use std::io::{self, Write};
 /// A vector of columns that are used in the query.
 fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
     let mut used_columns: Vec<Column> = vec![];
-    let aggregate_functions: Vec<&str> = vec!["sum(", "avg("];
+    // let aggregate_functions: Vec<&str> = vec!["sum(", "avg("];
     let mut index = 0;
 
     if requested.contains(&"*".to_string()) {
@@ -34,7 +36,7 @@ fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
     }
 
     while index < existing.len() {
-        for func in aggregate_functions.iter() {
+        for func in SUPPORTED_AGGREGATIONS.iter() {
             if requested.contains(&format!("{func}{})", existing[index].name)) {
                 existing[index].usage = Some(format!("{func}{})", existing[index].name));
                 used_columns.push(existing[index].to_owned());
