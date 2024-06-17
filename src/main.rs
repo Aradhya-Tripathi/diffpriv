@@ -1,6 +1,4 @@
 /*
-Configurations will later be stored permanently once the interface for interaction is decided.
-For now, all fields need to be filled on boot.
 We will also be analyzing the query before running it to disallow unwanted query runs.
 Currently, we have access to everything, but strict query checking will be implemented later.
 */
