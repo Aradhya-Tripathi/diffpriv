@@ -5,7 +5,7 @@ We will also be analyzing the query before running it to disallow unwanted query
 Currently, we have access to everything, but strict query checking will be implemented later.
 */
 use diffpriv::database::database::Database;
-use diffpriv::database::schema::{Column, Schema};
+use diffpriv::database::schema::{Column, Schema, Table};
 use diffpriv::query::analyzer;
 use diffpriv::transforms::laplace_transform;
 
@@ -66,7 +66,6 @@ fn apply_transforms(
     query_result: Vec<HashMap<String, String>>,
     privacy_budget_map: &HashMap<String, f64>,
 ) -> Vec<f64> {
-    // Test function!
     // If usage does not exist that means this query is not trying to get the
     // average of a perticular row, instead it's query the whole row or something else
     // which in any case is not allowed!
@@ -85,21 +84,24 @@ fn apply_transforms(
                         .expect("Illegal usage no aggregate used on this column!");
                     // This will later be removed and we will have
                     // A strict query checker before the query is actually executed!
-                    laplace_transform(
-                        true_value,
-                        column.sensitivity,
-                        privacy_budget_map
-                            .get::<String>(&column.table_name)
-                            .unwrap()
-                            .clone(),
-                    )
+                    let table_budget = privacy_budget_map
+                        .get::<String>(&column.table_name)
+                        .unwrap()
+                        .clone();
+                    if table_budget <= 0.0 {
+                        println!(
+                            "Ran out of budget for {} expect invalid query results!",
+                            &column.table_name
+                        )
+                    }
+                    laplace_transform(true_value, column.sensitivity, table_budget)
                 })
             })
         })
         .collect()
 }
 
-fn main() {
+fn configure() -> (Vec<Table>, Database, HashMap<String, f64>) {
     println!("------CONFIGURATION-------");
     print!("Database Path/URI> ");
     io::stdout().flush().unwrap();
@@ -142,7 +144,11 @@ fn main() {
     }
 
     println!("-------END CONFIGURATION-------");
+    (database_tables, database_connection, privacy_budget_map)
+}
 
+fn main() {
+    let (database_tables, mut database_connection, privacy_budget_map) = configure();
     loop {
         let mut query = String::new();
         print!("query> ");
@@ -151,7 +157,6 @@ fn main() {
 
         let analyzer = analyzer::SqlAnalyzer::new(&query);
         let requested_columns = analyzer.columns_from_sql();
-        // let requested_tables = analyzer.tables_from_sql();
         let existing_columns = database_tables
             .iter()
             .flat_map(|table| table.columns.clone())
