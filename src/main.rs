@@ -10,7 +10,10 @@ use diffpriv::query::analyzer;
 use diffpriv::transforms::laplace_transform;
 
 use std::collections::HashMap;
-use std::io::{self, Write};
+use std::io::{self, BufReader, Write};
+use std::{fs, process};
+
+use serde_json::{self, Value};
 
 static SUPPORTED_AGGREGATIONS: [&str; 3] = ["avg(", "sum(", "count("];
 
@@ -101,54 +104,88 @@ fn apply_transforms(
         .collect()
 }
 
-fn configure() -> (Vec<Table>, Database, HashMap<String, f64>) {
-    println!("------CONFIGURATION-------");
-    print!("Database Path/URI> ");
+fn configure_from_file(
+    path_to_configuration: &str,
+) -> (Vec<Table>, Database, HashMap<String, f64>) {
+    let mut database_type = String::new();
+
+    let file = fs::File::open(path_to_configuration).expect("No configuration file found!");
+    let reader = BufReader::new(file);
+    let configurations: Value = serde_json::from_reader(reader).unwrap();
+
+    print!("Database Type> ");
     io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut database_type).unwrap();
 
-    let mut database_uri = String::new();
-    io::stdin().read_line(&mut database_uri).unwrap();
-    let mut database_connection = Database::new(&database_uri).unwrap();
-    println!("{database_connection}");
+    match configurations.get(&database_type.trim()) {
+        Some(content) => {
+            let database_uri: String;
 
-    println!("Generating database schema...");
-    let mut database_tables = Schema::from_connection(&mut database_connection);
-
-    let mut privacy_budget_map = HashMap::new();
-    // Setting sensitivity for each column in all the tables and the table privacy budget.
-    for table in database_tables.iter_mut() {
-        println!("Setting configurations for {}", table.name);
-        table.columns.iter_mut().for_each(|column| {
-            let mut sensitivity = String::new();
-            print!("Enter sensitivity for {}: ", column.name);
-            io::stdout().flush().unwrap();
-            io::stdin().read_line(&mut sensitivity).unwrap();
-            let sensitivity = sensitivity.trim().parse::<f64>();
-            match sensitivity {
-                Ok(value) => column.sensitivity = value,
-                Err(_) => eprintln!("Error parsing sensitivity falling back to default 0.0"),
+            if content.get("in_memory").unwrap() == false {
+                database_uri = format!(
+                    "{}{}",
+                    content.get("uri").unwrap().as_str().unwrap(),
+                    content.get("database").unwrap().as_str().unwrap()
+                );
+            } else {
+                database_uri = content
+                    .get("database")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string();
             }
-        });
-        let mut privacy_budget = String::new();
-        print!("Enter privacy budget for {}: ", table.name);
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut privacy_budget).unwrap();
-        let table_privacy = match privacy_budget.trim().parse::<f64>() {
-            Ok(value) => value,
-            Err(_) => {
-                eprintln!("Error parsing privacy budget falling back to default 0.0");
-                0.0
+
+            let mut database_connection = Database::new(&database_uri).unwrap();
+            let mut database_tables = Schema::from_connection(&mut database_connection);
+            let mut privacy_budget_map: HashMap<String, f64> = HashMap::new();
+
+            for table in database_tables.iter_mut() {
+                let table_settings = content.get("tables").unwrap().get(&table.name).unwrap();
+
+                table.columns.iter_mut().for_each(|column| {
+                    let sensitivity = table_settings.get(&column.name).unwrap().as_f64().unwrap();
+                    column.sensitivity = sensitivity;
+                    println!(
+                        "Setting sensitivity for {} to {}",
+                        &column.name, &sensitivity
+                    );
+                });
+                let table_privacy = table_settings
+                    .get("__table__privacy")
+                    .unwrap()
+                    .as_f64()
+                    .unwrap();
+
+                table.privacy_budget = table_privacy;
+                privacy_budget_map.insert(table.name.clone(), table_privacy);
+                println!(
+                    "Setting table privacy for {} to {}",
+                    &table.name, &table_privacy
+                );
             }
-        };
-        privacy_budget_map.insert(table.name.clone(), table_privacy);
+
+            (database_tables, database_connection, privacy_budget_map)
+        }
+        None => {
+            eprintln!(
+                "No such database {} found in configurations",
+                &database_type.trim()
+            );
+            process::exit(-1);
+        }
     }
-
-    println!("-------END CONFIGURATION-------");
-    (database_tables, database_connection, privacy_budget_map)
 }
 
 fn main() {
-    let (database_tables, mut database_connection, privacy_budget_map) = configure();
+    let mut configuration_path = String::new();
+    print!("Configuration path> ");
+    io::stdout().flush().unwrap();
+    io::stdin().read_line(&mut configuration_path).unwrap();
+
+    let (database_tables, mut database_connection, privacy_budget_map) =
+        configure_from_file(&configuration_path.trim());
+
     loop {
         let mut query = String::new();
         print!("query> ");
