@@ -13,7 +13,7 @@ use std::{fs, process};
 
 use serde_json::{self, Value};
 
-static SUPPORTED_AGGREGATIONS: [&str; 3] = ["avg(", "sum(", "count("];
+static mut ALLOWED_AGGREGATIONS: Vec<String> = vec![];
 
 /// Identifies and returns the columns used in the requested query.
 /// Essentially `Column` construction from the requested columns detected
@@ -37,12 +37,16 @@ fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
     }
 
     while index < existing.len() {
-        for func in SUPPORTED_AGGREGATIONS.iter() {
-            if requested.contains(&format!("{func}{})", existing[index].name)) {
-                existing[index].usage = Some(format!("{func}{})", existing[index].name));
-                used_columns.push(existing[index].to_owned());
+        // mutable statics can be mutated by multiple threads: aliasing violations or data races will cause undefined behavior
+        unsafe {
+            for func in ALLOWED_AGGREGATIONS.iter() {
+                if requested.contains(&format!("{func}{})", existing[index].name)) {
+                    existing[index].usage = Some(format!("{func}{})", existing[index].name));
+                    used_columns.push(existing[index].to_owned());
+                }
             }
         }
+
         if requested.contains(&existing[index].name) {
             used_columns.push(existing[index].to_owned());
         }
@@ -105,11 +109,23 @@ fn apply_transforms(
 fn configure_from_file(
     path_to_configuration: &str,
 ) -> (Vec<Table>, Database, HashMap<String, f64>) {
+    // Todo handle malformed files.
     let mut database_type = String::new();
 
     let file = fs::File::open(path_to_configuration).expect("No configuration file found!");
     let reader = BufReader::new(file);
     let configurations: Value = serde_json::from_reader(reader).unwrap();
+
+    unsafe {
+        ALLOWED_AGGREGATIONS = configurations
+            .get("allowed_aggregations")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|val| val.as_str().unwrap().to_owned())
+            .collect::<Vec<String>>();
+    }
 
     print!("Database Type> ");
     io::stdout().flush().unwrap();

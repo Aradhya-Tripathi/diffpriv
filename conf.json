@@ -1,4 +1,5 @@
 {
+  "allowed_aggregations": ["avg(", "sum(", "count("],
   "mysql": {
     "in_memory": false,
     "uri": "mysql://root:MARIADBPASSWORD@127.0.0.1:3306/",
