@@ -76,9 +76,9 @@ fn apply_transforms(
         .collect();
 
     query_result
-        .into_iter()
+        .iter()
         .flat_map(|result| {
-            result.into_iter().filter_map(|(k, v)| {
+            result.iter().filter_map(|(k, v)| {
                 usage_to_column.get(&k).map(|&column| {
                     let true_value = v.parse::<f64>().unwrap(); // We won't be entering this block if the query is not an aggregate query
                     let table_budget = privacy_budget_map
@@ -148,13 +148,11 @@ fn configure_from_file(
 
             for table in database_tables.iter_mut() {
                 let table_settings = content.get("tables").unwrap().get(&table.name).unwrap();
-
                 table.columns.iter_mut().for_each(|column| {
                     let sensitivity = table_settings
                         .get(&column.name)
                         .map(|val| val.as_f64().unwrap())
                         .unwrap_or_else(|| f64::INFINITY);
-                    column.sensitivity = sensitivity;
                     if sensitivity != f64::INFINITY {
                         println!(
                             "Setting sensitivity for {} to {}",
@@ -162,17 +160,18 @@ fn configure_from_file(
                         );
                     } else {
                         println!(
-                            "Private column found setting sesitivity to {}",
+                            "Private column found setting sensitivity to {}",
                             &sensitivity
                         )
                     }
+                    column.sensitivity = sensitivity;
                 });
+
                 let table_privacy = table_settings
                     .get("__table__privacy")
                     .unwrap()
                     .as_f64()
                     .unwrap();
-
                 table.privacy_budget = table_privacy;
                 privacy_budget_map.insert(table.name.clone(), table_privacy);
                 println!(
@@ -180,7 +179,6 @@ fn configure_from_file(
                     &table.name, &table_privacy
                 );
             }
-
             (database_tables, database_connection, privacy_budget_map)
         }
         None => {
