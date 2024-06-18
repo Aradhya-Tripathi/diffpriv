@@ -19,7 +19,6 @@
     "tables": {
       "Users": {
         "name": 0.1,
-        "age": 0.1,
         "__table__privacy": 0.12
       }
     }

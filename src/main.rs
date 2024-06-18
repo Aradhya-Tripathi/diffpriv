@@ -1,6 +1,9 @@
 /*
 We will also be analyzing the query before running it to disallow unwanted query runs.
 Currently, we have access to everything, but strict query checking will be implemented later.
+We also don't allow * queries since we need to manage the privacy & sensitivity of each column
+therefore something like: select count(*) from XYX; is treated as an illegal query.
+Note - The password for the database server is generating on the fly.
 */
 use diffpriv::database::database::Database;
 use diffpriv::database::schema::{Column, Schema, Table};
@@ -28,13 +31,7 @@ static mut ALLOWED_AGGREGATIONS: Vec<String> = vec![];
 /// A vector of columns that are used in the query.
 fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
     let mut used_columns: Vec<Column> = vec![];
-    // let aggregate_functions: Vec<&str> = vec!["sum(", "avg("];
     let mut index = 0;
-
-    if requested.contains(&"*".to_string()) {
-        // Wildcard should mean we are queries everything.
-        return existing;
-    }
 
     while index < existing.len() {
         // mutable statics can be mutated by multiple threads: aliasing violations or data races will cause undefined behavior
@@ -53,7 +50,6 @@ fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
 
         index += 1;
     }
-
     used_columns
 }
 /// Applies Laplace transforms to the query results based on column sensitivity.
@@ -84,11 +80,7 @@ fn apply_transforms(
         .flat_map(|result| {
             result.into_iter().filter_map(|(k, v)| {
                 usage_to_column.get(&k).map(|&column| {
-                    let true_value = v
-                        .parse::<f64>()
-                        .expect("Illegal usage no aggregate used on this column!");
-                    // This will later be removed and we will have
-                    // A strict query checker before the query is actually executed!
+                    let true_value = v.parse::<f64>().unwrap(); // We won't be entering this block if the query is not an aggregate query
                     let table_budget = privacy_budget_map
                         .get::<String>(&column.table_name)
                         .unwrap()
@@ -158,12 +150,22 @@ fn configure_from_file(
                 let table_settings = content.get("tables").unwrap().get(&table.name).unwrap();
 
                 table.columns.iter_mut().for_each(|column| {
-                    let sensitivity = table_settings.get(&column.name).unwrap().as_f64().unwrap();
+                    let sensitivity = table_settings
+                        .get(&column.name)
+                        .map(|val| val.as_f64().unwrap())
+                        .unwrap_or_else(|| f64::INFINITY);
                     column.sensitivity = sensitivity;
-                    println!(
-                        "Setting sensitivity for {} to {}",
-                        &column.name, &sensitivity
-                    );
+                    if sensitivity != f64::INFINITY {
+                        println!(
+                            "Setting sensitivity for {} to {}",
+                            &column.name, &sensitivity
+                        );
+                    } else {
+                        println!(
+                            "Private column found setting sesitivity to {}",
+                            &sensitivity
+                        )
+                    }
                 });
                 let table_privacy = table_settings
                     .get("__table__privacy")
@@ -218,6 +220,13 @@ fn main() {
         let transformed_query_results =
             apply_transforms(used_columns, query_result, &privacy_budget_map);
 
-        println!("{:?}", transformed_query_results);
+        print!("> ");
+        if transformed_query_results.len() == 0 {
+            print!("Illegal query use an aggregation function!");
+        }
+        for result in transformed_query_results {
+            print!("{result} ");
+        }
+        println!();
     }
 }
