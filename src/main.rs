@@ -66,7 +66,7 @@ fn apply_transforms(
     used_columns: Vec<Column>,
     query_result: Vec<HashMap<String, String>>,
     privacy_budget_map: &HashMap<String, f64>,
-) -> Vec<f64> {
+) -> Vec<HashMap<String, f64>> {
     // If usage does not exist that means this query is not trying to get the
     // average of a perticular row, instead it's query the whole row or something else
     // which in any case is not allowed!
@@ -79,6 +79,7 @@ fn apply_transforms(
         .iter()
         .flat_map(|result| {
             result.iter().filter_map(|(k, v)| {
+                let mut result_map: HashMap<String, f64> = HashMap::new();
                 usage_to_column.get(&k).map(|&column| {
                     let true_value = v.parse::<f64>().unwrap(); // We won't be entering this block if the query is not an aggregate query
                     let table_budget = privacy_budget_map
@@ -91,7 +92,13 @@ fn apply_transforms(
                             &column.table_name
                         )
                     }
-                    laplace_transform(true_value, column.sensitivity, table_budget)
+                    result_map.insert(
+                        column.usage.as_ref().unwrap().to_owned(),
+                        // There is no way that this unwrap fails since we are in
+                        // usage_to_column already which means that column.usage exists!
+                        laplace_transform(true_value, column.sensitivity, table_budget).to_owned(),
+                    );
+                    result_map
                 })
             })
         })
@@ -223,7 +230,7 @@ fn main() {
             print!("Illegal query use an aggregation function!");
         }
         for result in transformed_query_results {
-            print!("{result} ");
+            print!("{result:?} ");
         }
         println!();
     }

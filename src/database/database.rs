@@ -48,12 +48,6 @@ impl Database {
     /// Returns an error if the provided `path` is not valid or the database connection cannot be established.
     ///
     /// # Example
-    ///
-    /// ```
-    /// use my_database_lib::Database;
-    ///
-    /// let database = Database::new("/path/to/sqlite.db");
-    /// ```
     pub fn new(path: &str) -> Result<Self, String> {
         let processed_path = path.trim_end();
         if Path::exists(Path::new(processed_path)) {
@@ -86,15 +80,6 @@ impl Database {
     ///
     /// A `String` representation of the SQLite value.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// use my_database_lib::Database;
-    /// use my_database_lib::ValueRef;
-    ///
-    /// let value = ValueRef::Integer(42);
-    /// let sql_representation = Database::as_sql_from_sqlite(value);
-    /// ```
     fn as_sql_from_sqlite(value_ref: ValueRef) -> String {
         match value_ref {
             ValueRef::Null => "Null".to_string(),
@@ -118,15 +103,6 @@ impl Database {
     /// # Returns
     ///
     /// A vector of `HashMap<String, String>` where each `HashMap` represents a row of results.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use my_database_lib::Database;
-    ///
-    /// let mut db = Database::new("mysql://user:pass@localhost:3306/dbname").unwrap();
-    /// let results = db.execute_query("SELECT * FROM users");
-    /// ```
     fn execute_mysql_query(connector: &mut PooledConn, sql: &str) -> Vec<HashMap<String, String>> {
         let rows: Vec<Row> = connector.query(sql).unwrap();
         let results: Vec<HashMap<String, String>> = rows
@@ -153,15 +129,6 @@ impl Database {
     /// # Returns
     ///
     /// A vector of `HashMap<String, String>` where each `HashMap` represents a row of results.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use my_database_lib::Database;
-    ///
-    /// let mut db = Database::new("/path/to/sqlite.db").unwrap();
-    /// let results = db.execute_query("SELECT * FROM users");
-    /// ```
     fn execute_sqlite_query(
         connector: &mut SqliteConnection,
         sql: &str,
@@ -196,16 +163,6 @@ impl Database {
     /// # Returns
     ///
     /// A vector of `HashMap<String, String>` where each `HashMap` represents a row of results.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use my_database_lib::Database;
-    ///
-    /// let mut db = Database::new("/path/to/sqlite.db").unwrap();
-    /// let results = db.execute_query("SELECT * FROM users");
-    /// ```
-    ///
     /// This function delegates to `execute_mysql_query` or `execute_sqlite_query` based on the connection type.
     pub fn execute_query(&mut self, sql: &str) -> Vec<HashMap<String, String>> {
         match &mut self.connection {
