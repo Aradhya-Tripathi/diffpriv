@@ -1,0 +1,26 @@
+{
+  "allowed_aggregations": ["avg(", "sum(", "count("],
+  "mysql": {
+    "in_memory": false,
+    "uri": "mysql://root:MARIADBPASSWORD@127.0.0.1:3306/",
+    "database": "test",
+    "tables": {
+      "Users": {
+        "name": 0.12,
+        "age": 0.112,
+        "created_at": 0.31,
+        "__table__privacy": 1.2
+      }
+    }
+  },
+  "sqlite": {
+    "in_memory": true,
+    "database": "test.db",
+    "tables": {
+      "Users": {
+        "name": 0.1,
+        "__table__privacy": 0.12
+      }
+    }
+  }
+}
