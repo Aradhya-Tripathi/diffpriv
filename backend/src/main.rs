@@ -30,7 +30,7 @@ static mut ALLOWED_AGGREGATIONS: Vec<String> = vec![];
 /// # Returns
 ///
 /// A vector of columns that are used in the query.
-fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
+fn _get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
     let mut used_columns: Vec<Column> = vec![];
     let mut index = 0;
 
@@ -63,7 +63,7 @@ fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
 /// # Returns
 ///
 /// A vector of f64 representing the transformed query results.
-fn apply_transforms(
+fn _apply_transforms(
     used_columns: Vec<Column>,
     query_result: Vec<HashMap<String, String>>,
     privacy_budget_map: &HashMap<String, f64>,
@@ -109,9 +109,15 @@ fn apply_transforms(
 fn configure_from_file(
     path_to_configuration: &str,
     database_type: &str,
-) -> (Vec<Table>, Database, HashMap<String, f64>) {
+) -> Result<(Vec<Table>, Database, HashMap<String, f64>), String> {
     // Todo handle malformed files.
-    let file = fs::File::open(path_to_configuration).expect("No configuration file found!");
+    let file = match fs::File::open(path_to_configuration) {
+        Ok(file) => file,
+        Err(_) => {
+            return Err("Failed to open configuration file!".to_string());
+        }
+    };
+
     let reader = BufReader::new(file);
     let configurations: Value = serde_json::from_reader(reader).unwrap();
 
@@ -145,7 +151,10 @@ fn configure_from_file(
                     .to_string();
             }
 
-            let mut database_connection = Database::new(&database_uri).unwrap();
+            let mut database_connection = match Database::new(&database_uri) {
+                Ok(connection) => connection,
+                Err(msg) => return Err(msg),
+            };
             let mut database_tables = Schema::from_connection(&mut database_connection);
             let mut privacy_budget_map: HashMap<String, f64> = HashMap::new();
 
@@ -182,63 +191,22 @@ fn configure_from_file(
                     &table.name, &table_privacy
                 );
             }
-            (database_tables, database_connection, privacy_budget_map)
+            Ok((database_tables, database_connection, privacy_budget_map))
         }
-        None => {
-            eprintln!(
-                "No such database {} found in configurations",
-                &database_type.trim()
-            );
-            process::exit(-1);
-        }
-    }
-}
-
-fn _main() {
-    let mut configuration_path = String::new();
-    print!("Configuration path> ");
-    io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut configuration_path).unwrap();
-
-    let (database_tables, mut database_connection, privacy_budget_map) =
-        configure_from_file(&configuration_path.trim(), "sqlite");
-
-    loop {
-        let mut query = String::new();
-        print!("query> ");
-        io::stdout().flush().unwrap();
-        io::stdin().read_line(&mut query).unwrap();
-
-        let analyzer = analyzer::SqlAnalyzer::new(&query);
-        let requested_columns = analyzer.columns_from_sql();
-        let existing_columns = database_tables
-            .iter()
-            .flat_map(|table| table.columns.clone())
-            .collect();
-
-        let used_columns = get_used_columns(requested_columns, existing_columns);
-        let query_result = database_connection.execute_query(&query);
-        let transformed_query_results =
-            apply_transforms(used_columns, query_result, &privacy_budget_map);
-
-        print!("> ");
-        if transformed_query_results.len() == 0 {
-            print!("Illegal query use an aggregation function!");
-        }
-        for result in transformed_query_results {
-            print!("{result:?} ");
-        }
-        println!();
+        None => Err(format!("Invalid Database: {}", &database_type.trim())),
     }
 }
 
 #[tauri::command]
-fn configure(config_path: String, database_type: String) {
-    println!(
-        "Looking for conf file here {}:{}!",
-        config_path, database_type
-    );
-    configure_from_file(&config_path, &database_type);
+fn configure(config_path: String, database_type: String) -> Result<(), String> {
+    let configured = configure_from_file(&config_path, &database_type);
+    match configured {
+        Ok((database_tables, database_connection, privacy_budget_map)) => {
+            println!("We are configured!");
+            Ok(())
+        }
+        Err(msg) => Err(msg),
+    }
 }
 
 fn main() {
