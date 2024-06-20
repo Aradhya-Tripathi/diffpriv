@@ -1,3 +1,4 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 /*
 We will also be analyzing the query before running it to disallow unwanted query runs.
 Currently, we have access to everything, but strict query checking will be implemented later.
@@ -107,10 +108,9 @@ fn apply_transforms(
 
 fn configure_from_file(
     path_to_configuration: &str,
+    database_type: &str,
 ) -> (Vec<Table>, Database, HashMap<String, f64>) {
     // Todo handle malformed files.
-    let mut database_type = String::new();
-
     let file = fs::File::open(path_to_configuration).expect("No configuration file found!");
     let reader = BufReader::new(file);
     let configurations: Value = serde_json::from_reader(reader).unwrap();
@@ -126,11 +126,7 @@ fn configure_from_file(
             .collect::<Vec<String>>();
     }
 
-    print!("Database Type> ");
-    io::stdout().flush().unwrap();
-    io::stdin().read_line(&mut database_type).unwrap();
-
-    match configurations.get(&database_type.trim()) {
+    match configurations.get(database_type.trim()) {
         Some(content) => {
             let database_uri: String;
 
@@ -198,14 +194,14 @@ fn configure_from_file(
     }
 }
 
-fn main() {
+fn _main() {
     let mut configuration_path = String::new();
     print!("Configuration path> ");
     io::stdout().flush().unwrap();
     io::stdin().read_line(&mut configuration_path).unwrap();
 
     let (database_tables, mut database_connection, privacy_budget_map) =
-        configure_from_file(&configuration_path.trim());
+        configure_from_file(&configuration_path.trim(), "sqlite");
 
     loop {
         let mut query = String::new();
@@ -234,4 +230,20 @@ fn main() {
         }
         println!();
     }
+}
+
+#[tauri::command]
+fn configure(config_path: String, database_type: String) {
+    println!(
+        "Looking for conf file here {}:{}!",
+        config_path, database_type
+    );
+    configure_from_file(&config_path, &database_type);
+}
+
+fn main() {
+    tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![configure])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }
