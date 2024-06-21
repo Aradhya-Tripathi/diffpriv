@@ -1,20 +1,20 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 
-const ConfigForm = () => {
-  const [configPath, setConfigPath] = useState("");
-  const [databaseType, setDatabaseType] = useState("sqlite");
+const ConfigForm = ({ onConnect }) => {
+  const [databasePath, setDatabasePath] = useState("");
 
-  async function configure() {
-    if (configPath && databaseType) {
-      await invoke("configure", {
-        configPath: configPath,
-        databaseType: databaseType,
-      });
-      setConfigPath("");
-      setDatabaseType("");
+  const configure = async () => {
+    if (databasePath) {
+      try {
+        const msg = await invoke("connect", { databasePath });
+        setDatabasePath("");
+        onConnect();
+      } catch (err) {
+        console.log(err);
+      }
     }
-  }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -22,28 +22,17 @@ const ConfigForm = () => {
   };
 
   return (
-    <div className="config-form-container">
+    <div className="config-form-container" id="config-form">
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="configPath">Configuration Path:</label>
           <input
             type="text"
             id="configPath"
-            value={configPath}
-            onChange={(e) => setConfigPath(e.target.value)}
+            value={databasePath}
+            onChange={(e) => setDatabasePath(e.target.value)}
+            placeholder="Path/URI"
             required
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="dbType">Database Type:</label>
-          <select
-            id="dbType"
-            value={databaseType}
-            onChange={(e) => setDatabaseType(e.target.value)}
-          >
-            <option value="sqlite">SQLite</option>
-            <option value="mysql">MySQL</option>
-          </select>
         </div>
         <button type="submit">Submit</button>
       </form>

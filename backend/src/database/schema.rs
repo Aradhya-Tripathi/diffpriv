@@ -4,12 +4,13 @@ use core::fmt;
 use mysql::prelude::Queryable;
 use mysql::PooledConn;
 use rusqlite::Connection as SqliteConnection;
+use serde::Serialize;
 
 pub struct Schema {
     pub tables: Vec<Table>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Table {
     pub name: String,
     pub columns: Vec<Column>,
@@ -22,7 +23,7 @@ impl fmt::Display for Table {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Column {
     pub name: String,
     pub ctype: String,

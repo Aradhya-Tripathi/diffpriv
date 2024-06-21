@@ -52,19 +52,16 @@ button {
 
 .app-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
-  width: 100wh;
+  width: 100vw;
   background-color: #2f2f2f;
-  justify-content: center;
   align-items: center;
 }
 
 .config-form-container {
-  display: flex;
   width: 50%;
-  height: 70%;
   justify-content: center;
-  align-items: center;
   padding: 20px;
   border-radius: 5px;
   color: white;
@@ -90,10 +87,6 @@ select {
   box-sizing: border-box;
 }
 
-#dbType {
-  height: 5vh;
-}
-
 button {
   padding: 10px 15px;
   border: none;
@@ -105,4 +98,80 @@ button {
 
 button:hover {
   background-color: #45a049;
+}
+
+.tables-container {
+  display: flex;
+  flex-wrap: wrap;
+  height: 50vh;
+  overflow-x: auto;
+  overflow-y: auto;
+  gap: 16px;
+  padding: 16px;
+}
+
+.table-card {
+  background-color: grey;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  overflow-x: auto;
+  overflow-y: auto;
+  width: 250px;
+  height: 20vh;
+  transition: transform 0.2s;
+}
+
+.table-card:hover {
+  transform: scale(1.05);
+}
+
+.table-name {
+  font-size: 1.2em;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.table-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.table-column {
+  color: black;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+
+.table-column::placeholder {
+  color: white;
+}
+
+.set-sensitivity {
+  background-color: #4caf50; /* Green */
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin-top: 16px;
+  margin-left: auto;
+  margin-right: auto;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.set-sensitivity:hover {
+  background-color: #45a049;
+}
+
+.exc-window {
+  height: 100vh;
+  width: 100vw;
+  background-color: black;
 }
