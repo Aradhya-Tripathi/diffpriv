@@ -65,7 +65,7 @@ const Tables = ({ onSet }) => {
               {table.columns.map((column, colIndex) => (
                 <div key={colIndex} className="table-column">
                   <input
-                    type="number"
+                    type="text"
                     placeholder={column.name}
                     value={inputValues[table.name]?.[column.name] || ""}
                     onChange={(e) =>

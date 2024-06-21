@@ -6,9 +6,10 @@ We also don't allow * queries since we need to manage the privacy & sensitivity 
 therefore something like: select count(*) from XYX; is treated as an illegal query.
 Note - The password for the database server is generating on the fly.
 */
-use diffpriv::database::schema::Table;
-use diffpriv::database::{database::Database, schema::Column, schema::Schema};
+use diffpriv::database::database::Database;
+use diffpriv::database::schema::{Column, Schema, Table};
 use diffpriv::query::analyzer;
+use diffpriv::transforms::laplace_transform;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::State;
@@ -18,6 +19,45 @@ static ALLOWED_AGGREGATIONS: [&str; 3] = ["sum(", "avg(", "count("];
 struct AppState {
     pub connection: Mutex<Option<Database>>,
     pub schema: Mutex<Option<Vec<Table>>>,
+}
+
+fn apply_transforms(
+    used_columns: Vec<Column>,
+    query_result: Vec<HashMap<String, String>>,
+    budget: f64,
+) -> Vec<HashMap<String, f64>> {
+    // If usage does not exist that means this query is not trying to get the
+    // average of a perticular row, instead it's query the whole row or something else
+    // which in any case is not allowed!
+    let usage_to_column: HashMap<&String, &Column> = used_columns
+        .iter()
+        .filter_map(|column| column.usage.as_ref().map(|usage| (usage, column)))
+        .collect();
+
+    query_result
+        .iter()
+        .flat_map(|result| {
+            result.iter().filter_map(|(k, v)| {
+                let mut result_map: HashMap<String, f64> = HashMap::new();
+                usage_to_column.get(&k).map(|&column| {
+                    let true_value = v.parse::<f64>().unwrap(); // We won't be entering this block if the query is not an aggregate query
+                    if budget <= 0.0 {
+                        println!(
+                            "Ran out of budget for {} expect invalid query results!",
+                            &column.table_name
+                        )
+                    }
+                    result_map.insert(
+                        column.usage.as_ref().unwrap().to_owned(),
+                        // There is no way that this unwrap fails since we are in
+                        // usage_to_column already which means that column.usage exists!
+                        laplace_transform(true_value, column.sensitivity, budget).to_owned(),
+                    );
+                    result_map
+                })
+            })
+        })
+        .collect()
 }
 
 fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Column> {
@@ -44,7 +84,7 @@ fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
 }
 
 #[tauri::command]
-fn execute_sql(app_state: State<'_, Arc<AppState>>, query: String) {
+fn execute_sql(app_state: State<'_, Arc<AppState>>, query: String, budget: f64) {
     // MutexGaurd allows the automatic unlocking mechanism to work, we don't
     // Need to explicitly call unlock we can just make MutexGaurd go out of scope.
     // We know for a fact that at this point we will have a value in the connection.
@@ -63,8 +103,8 @@ fn execute_sql(app_state: State<'_, Arc<AppState>>, query: String) {
     let used_columns = get_used_columns(requested_columns, existing_columns);
     let query_result = connection.execute_query(&query);
 
-    println!("{used_columns:?}");
-    println!("{query_result:?}");
+    let transformed_query_results = apply_transforms(used_columns, query_result, budget);
+    println!("{transformed_query_results:?}");
 }
 
 #[tauri::command]
