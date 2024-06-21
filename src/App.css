@@ -103,7 +103,7 @@ button:hover {
 .tables-container {
   display: flex;
   flex-wrap: wrap;
-  height: 50vh;
+  height: 100vh;
   overflow-x: auto;
   overflow-y: auto;
   gap: 16px;
@@ -174,4 +174,43 @@ button:hover {
   height: 100vh;
   width: 100vw;
   background-color: black;
+}
+
+.exc-window {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.output-window {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  border-bottom: 1px solid #555;
+}
+
+.output-line {
+  margin: 5px 0;
+}
+
+.input-window {
+  padding: 10px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  border: none;
+  outline: none;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 16px;
+}
+
+.input-field::placeholder {
+  color: #555;
 }
