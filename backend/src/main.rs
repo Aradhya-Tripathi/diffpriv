@@ -84,7 +84,11 @@ fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
 }
 
 #[tauri::command]
-fn execute_sql(app_state: State<'_, Arc<AppState>>, query: String, budget: f64) {
+fn execute_sql(
+    app_state: State<'_, Arc<AppState>>,
+    query: String,
+    budget: f64,
+) -> Result<Vec<HashMap<String, f64>>, String> {
     // MutexGaurd allows the automatic unlocking mechanism to work, we don't
     // Need to explicitly call unlock we can just make MutexGaurd go out of scope.
     // We know for a fact that at this point we will have a value in the connection.
@@ -101,10 +105,10 @@ fn execute_sql(app_state: State<'_, Arc<AppState>>, query: String, budget: f64) 
         .collect();
 
     let used_columns = get_used_columns(requested_columns, existing_columns);
-    let query_result = connection.execute_query(&query);
+    let query_result = connection.execute_query(&query)?;
 
     let transformed_query_results = apply_transforms(used_columns, query_result, budget);
-    println!("{transformed_query_results:?}");
+    Ok(transformed_query_results)
 }
 
 #[tauri::command]
@@ -155,7 +159,7 @@ fn connect(
             Err(msg) => Err(msg),
         }
     } else {
-        Err("Already connected to the database!".to_string())
+        Ok("Already connected to the database!".to_string())
     }
 }
 

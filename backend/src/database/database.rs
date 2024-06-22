@@ -103,8 +103,12 @@ impl Database {
     /// # Returns
     ///
     /// A vector of `HashMap<String, String>` where each `HashMap` represents a row of results.
-    fn execute_mysql_query(connector: &mut PooledConn, sql: &str) -> Vec<HashMap<String, String>> {
-        let rows: Vec<Row> = connector.query(sql).unwrap();
+    fn execute_mysql_query(
+        connector: &mut PooledConn,
+        sql: &str,
+    ) -> Result<Vec<HashMap<String, String>>, String> {
+        let rows: Vec<Row> = connector.query(sql).map_err(|e| e.to_string())?;
+
         let results: Vec<HashMap<String, String>> = rows
             .iter()
             .map(|row| {
@@ -117,7 +121,7 @@ impl Database {
                 column_value_map
             })
             .collect();
-        results
+        Ok(results)
     }
     /// Executes a SQLite query using the provided database connection and SQL statement.
     ///
@@ -132,15 +136,15 @@ impl Database {
     fn execute_sqlite_query(
         connector: &mut SqliteConnection,
         sql: &str,
-    ) -> Vec<HashMap<String, String>> {
-        let mut query_stmt = connector.prepare(sql).unwrap();
+    ) -> Result<Vec<HashMap<String, String>>, String> {
+        let mut query_stmt = connector.prepare(sql).map_err(|e| e.to_string())?;
         let column_count = query_stmt.column_count();
         let column_names = query_stmt
             .column_names()
             .iter()
             .map(|r| r.to_string())
             .collect::<Vec<String>>();
-        let mut rows = query_stmt.query([]).unwrap();
+        let mut rows = query_stmt.query([]).map_err(|e| e.to_string())?;
         let mut results: Vec<HashMap<String, String>> = vec![];
         while let Some(row) = rows.next().unwrap() {
             let mut column_val_map = HashMap::new();
@@ -152,7 +156,7 @@ impl Database {
             }
             results.push(column_val_map.to_owned());
         }
-        results
+        Ok(results)
     }
     /// Executes a SQL query using the appropriate database connection based on the `Database` instance.
     ///
@@ -164,7 +168,7 @@ impl Database {
     ///
     /// A vector of `HashMap<String, String>` where each `HashMap` represents a row of results.
     /// This function delegates to `execute_mysql_query` or `execute_sqlite_query` based on the connection type.
-    pub fn execute_query(&mut self, sql: &str) -> Vec<HashMap<String, String>> {
+    pub fn execute_query(&mut self, sql: &str) -> Result<Vec<HashMap<String, String>>, String> {
         match &mut self.connection {
             ConnectionTypes::MySQL(ref mut connector) => {
                 Database::execute_mysql_query(connector, sql)
