@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { toast } from "sonner";
+import "../styles/Config.css";
 
 const ConfigForm = ({ onConnect }) => {
   const [databasePath, setDatabasePath] = useState("");
@@ -10,10 +11,10 @@ const ConfigForm = ({ onConnect }) => {
       try {
         const msg = await invoke("connect", { databasePath });
         setDatabasePath("");
-        toast.success(msg);
+        toast.success(msg, { duration: 2000 });
         onConnect();
       } catch (err) {
-        toast.error(err);
+        toast.error(err, { duration: 2000 });
       }
     }
   };

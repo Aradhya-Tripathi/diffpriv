@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import "../styles/Table.css";
 
 const Tables = ({ onSet }) => {
   const [tables, setTables] = useState([]);
@@ -51,7 +52,7 @@ const Tables = ({ onSet }) => {
     }
     console.log(convertedValues);
     await invoke("set_sensitivities", { sensitivities: convertedValues });
-    toast.success("Set sensitivities!");
+    toast.success("Set sensitivities!", { duration: 2000 });
     onSet();
   };
 

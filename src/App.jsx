@@ -1,7 +1,7 @@
 import { useState } from "react";
 import ConfigForm from "./components/ConfigForm";
 import Tables from "./components/Tables";
-import "./App.css";
+import "./styles/App.css";
 import { Toaster } from "sonner";
 import ExecutionWindow from "./components/ExecutionWindow";
 

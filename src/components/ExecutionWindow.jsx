@@ -1,5 +1,7 @@
-import { invoke } from "@tauri-apps/api";
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api";
+import "../styles/Execution.css";
+import { toast } from "sonner";
 
 const ExecutionWindow = () => {
   const [input, setInput] = useState("");
@@ -16,19 +18,22 @@ const ExecutionWindow = () => {
 
   const handleExecute = async () => {
     if (!budget) {
-      toast.error("Provide the budget for the query!");
+      toast.error("Provide the budget for the query!", { duration: 2000 });
       return;
     }
 
-    // Mock execution of SQL query
-    await invoke("execute_sql", {
-      query: input,
-      budget: parseFloat(budget),
-    });
-    const result = `Executed: ${input} with value: ${budget}`;
-    setOutput([...output, result]);
-    setInput("");
-    setbudget("");
+    try {
+      let result = await invoke("execute_sql", {
+        query: input,
+        budget: parseFloat(budget),
+      });
+      console.log(result);
+      setOutput([...output, JSON.stringify(result)]);
+      setInput("");
+      setbudget("");
+    } catch (err) {
+      toast.error(err);
+    }
   };
 
   return (
