@@ -57,45 +57,5 @@ button {
   width: 100vw;
   background-color: #2f2f2f;
   align-items: center;
-}
-
-.config-form-container {
-  width: 50%;
   justify-content: center;
-  padding: 20px;
-  border-radius: 5px;
-  color: white;
-  max-width: 400px;
-  margin: 0 auto;
-}
-
-.form-group {
-  margin-bottom: 10px;
-}
-
-label {
-  display: white;
-  margin-bottom: 5px;
-}
-
-input,
-select {
-  padding: 8px;
-  width: 100%;
-  border-radius: 4px;
-  border: 2px solid #ccc;
-  box-sizing: border-box;
-}
-
-button {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 4px;
-  background-color: #4caf50;
-  color: white;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #45a049;
 }
