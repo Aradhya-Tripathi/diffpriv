@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api";
-import "../styles/Execution.css";
 import { toast } from "sonner";
+import "../styles/Execution.css";
 
 const ExecutionWindow = () => {
   const [input, setInput] = useState("");
-  const [budget, setbudget] = useState("");
+  const [budget, setBudget] = useState("");
   const [output, setOutput] = useState([]);
 
   const handleInputChange = (e) => {
@@ -13,7 +13,7 @@ const ExecutionWindow = () => {
   };
 
   const handleFloatChange = (e) => {
-    setbudget(e.target.value);
+    setBudget(e.target.value);
   };
 
   const handleExecute = async () => {
@@ -27,12 +27,13 @@ const ExecutionWindow = () => {
         query: input,
         budget: parseFloat(budget),
       });
-      console.log(result);
-      setOutput([...output, JSON.stringify(result)]);
+
+      const newOutput = `${input}\n> ${JSON.stringify(result, null)}`;
+      setOutput([...output, newOutput]);
       setInput("");
-      setbudget("");
+      setBudget("");
     } catch (err) {
-      toast.error(err);
+      toast.error(err.message, { duration: 2000 });
     }
   };
 
@@ -40,9 +41,9 @@ const ExecutionWindow = () => {
     <div className="exc-window">
       <div className="output-window">
         {output.map((line, index) => (
-          <div key={index} className="output-line">
+          <pre key={index} className="output-line">
             {line}
-          </div>
+          </pre>
         ))}
       </div>
       <div className="input-window">
