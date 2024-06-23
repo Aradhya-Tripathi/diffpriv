@@ -81,6 +81,29 @@ fn get_used_columns(requested: Vec<String>, mut existing: Vec<Column>) -> Vec<Co
     used_columns
 }
 
+// RESET Command Functions
+
+#[tauri::command]
+fn reset_sensitivities(app_state: State<'_, Arc<AppState>>) {
+    let mut schema = app_state.schema.lock().unwrap();
+    let mut database = app_state.connection.lock().unwrap();
+    if let Some(database) = database.as_mut() {
+        *schema = Some(Schema::from_connection(database))
+    }
+    println!("Reset sensitivities!");
+}
+
+#[tauri::command]
+fn reset_connection(app_state: State<'_, Arc<AppState>>) {
+    // Function to reset connection
+    let mut schema = app_state.schema.lock().unwrap();
+    let mut database = app_state.connection.lock().unwrap();
+    *schema = None;
+    *database = None;
+}
+
+// End of RESET Command Functions
+
 #[tauri::command]
 fn execute_sql(
     app_state: State<'_, Arc<AppState>>,
@@ -178,6 +201,8 @@ fn main() {
             get_tables,
             set_sensitivities,
             execute_sql,
+            reset_sensitivities,
+            reset_connection,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

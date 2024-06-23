@@ -68,7 +68,7 @@ impl Database {
                 connection: ConnectionTypes::MySQL(connection_pool),
             });
         }
-        Err(format!("Failed to process database URI: {processed_path}"))
+        Err(format!("Failed to process database URI: {processed_path} (make sure to add database name in the URI)"))
     }
     /// Converts a `ValueRef` from SQLite to its corresponding SQL representation as a `String`.
     ///

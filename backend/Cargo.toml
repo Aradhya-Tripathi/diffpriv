@@ -1,8 +1,8 @@
 [package]
 name = "diffpriv"
-version = "0.0.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.1.0"
+description = "A lightweight system for differential privacy"
+authors = ["aradhyatripathi51@gmail.com"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,7 +11,7 @@ edition = "2021"
 tauri-build = { version = "1", features = [] }
 
 [dependencies]
-tauri = { version = "1", features = ["shell-open"] }
+tauri = { version = "1", features = [ "global-shortcut-all"] }
 serde = { version = "1", features = ["derive"] }
 rand = "0.8.5"
 regex = "1.10.5"

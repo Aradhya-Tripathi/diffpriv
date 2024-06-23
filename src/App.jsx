@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { invoke } from "@tauri-apps/api";
+import { useState, useEffect } from "react";
+import { registerAll, register } from "@tauri-apps/api/globalShortcut";
 import ConfigForm from "./components/ConfigForm";
 import Tables from "./components/Tables";
 import "./styles/App.css";
@@ -8,6 +10,21 @@ import ExecutionWindow from "./components/ExecutionWindow";
 function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [isSensitivitySet, setIsSensitivitySet] = useState(false);
+
+  useEffect(() => {
+    async function registerShortcut() {
+      await register("CommandOrControl+R", async () => {
+        await invoke("reset_sensitivities");
+        setIsSensitivitySet(false);
+      });
+      await register("CommandOrControl+Shift+R", async () => {
+        await invoke("reset_connection");
+        setIsSensitivitySet(false);
+        setIsConnected(false);
+      });
+    }
+    registerShortcut();
+  }, []);
 
   const handleConnection = () => {
     setIsConnected(true);
