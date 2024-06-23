@@ -116,6 +116,8 @@ fn set_sensitivities(
     app_state: State<'_, Arc<AppState>>,
     sensitivities: HashMap<String, HashMap<String, f64>>,
 ) {
+    // This is not a reference this is a owned value!
+    // any changes here won't reflect in the schema that is behind a mutex!!
     let mut database_tables = app_state.schema.lock().unwrap().clone().unwrap();
     database_tables.iter_mut().for_each(|table| {
         let table_sensitivity = sensitivities.get(&table.name).unwrap(); // We will for sure have this in the sensitivities
@@ -129,6 +131,9 @@ fn set_sensitivities(
             colum.sensitivity = field_sensitivity.to_owned();
         })
     });
+    // Explicitly change the value behind the mutex!!
+    let mut schema = app_state.schema.lock().unwrap();
+    *schema = Some(database_tables);
 }
 
 #[tauri::command]

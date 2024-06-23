@@ -14,7 +14,7 @@ const ConfigForm = ({ onConnect }) => {
         toast.success(msg, { duration: 2000 });
         onConnect();
       } catch (err) {
-        toast.error(err.message, { duration: 2000 });
+        toast.error(err, { duration: 2000 });
       }
     } else {
       toast.error("Database path cannot be empty", { duration: 2000 });
