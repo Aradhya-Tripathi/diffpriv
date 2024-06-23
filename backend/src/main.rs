@@ -1,7 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 /*
-We will also be analyzing the query before running it to disallow unwanted query runs.
-Currently, we have access to everything, but strict query checking will be implemented later.
 We also don't allow * queries since we need to manage the privacy & sensitivity of each column
 therefore something like: select count(*) from XYX; is treated as an illegal query.
 Note - The password for the database server is generating on the fly.
