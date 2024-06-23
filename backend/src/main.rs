@@ -45,7 +45,9 @@ fn apply_transforms(
             result.iter().filter_map(|(k, v)| {
                 let mut result_map: HashMap<String, f64> = HashMap::new();
                 usage_to_column.get(&k).map(|&column| {
-                    let true_value = v.parse::<f64>().unwrap(); // We won't be entering this block if the query is not an aggregate query
+                    // We need unwrap_or_default to handle Null and we are treating
+                    // nulls as 0 (my decision)
+                    let true_value = v.parse::<f64>().unwrap_or_default();
                     if budget <= 0.0 {
                         println!(
                             "Ran out of budget for {} expect invalid query results!",
