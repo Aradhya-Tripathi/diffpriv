@@ -113,7 +113,8 @@ fn execute_sql(
 fn set_sensitivities(
     app_state: State<'_, Arc<AppState>>,
     sensitivities: HashMap<String, HashMap<String, f64>>,
-) {
+) -> Result<String, String> {
+    // Add support for Infinite sensitivity
     let mut schema = app_state.schema.lock().unwrap();
     if let Some(database_tables) = schema.as_mut() {
         database_tables.iter_mut().for_each(|table| {
@@ -128,6 +129,9 @@ fn set_sensitivities(
                 column.sensitivity = field_sensitivity.to_owned();
             })
         });
+        Ok("Set sensitivities".to_string())
+    } else {
+        Err("Unable to set sensitivities".to_string())
     }
 }
 

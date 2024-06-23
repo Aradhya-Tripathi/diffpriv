@@ -51,9 +51,15 @@ const Tables = ({ onSet }) => {
       }
     }
     console.log(convertedValues);
-    await invoke("set_sensitivities", { sensitivities: convertedValues });
-    toast.success("Set sensitivities!", { duration: 2000 });
-    onSet();
+    try {
+      let msg = await invoke("set_sensitivities", {
+        sensitivities: convertedValues,
+      });
+      toast.success(msg);
+      onSet();
+    } catch (err) {
+      toast.error(err, { duration: 2000 });
+    }
   };
 
   return (

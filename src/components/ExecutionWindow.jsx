@@ -33,7 +33,7 @@ const ExecutionWindow = () => {
       setInput("");
       setBudget("");
     } catch (err) {
-      toast.error(err.message, { duration: 2000 });
+      toast.error(err, { duration: 2000 });
     }
   };
 
