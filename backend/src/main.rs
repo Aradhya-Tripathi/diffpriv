@@ -114,8 +114,6 @@ fn set_sensitivities(
     app_state: State<'_, Arc<AppState>>,
     sensitivities: HashMap<String, HashMap<String, f64>>,
 ) {
-    // This is not a reference this is a owned value!
-    // any changes here won't reflect in the schema that is behind a mutex!!
     let mut schema = app_state.schema.lock().unwrap();
     if let Some(database_tables) = schema.as_mut() {
         database_tables.iter_mut().for_each(|table| {
