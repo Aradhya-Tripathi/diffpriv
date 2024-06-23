@@ -116,22 +116,21 @@ fn set_sensitivities(
 ) {
     // This is not a reference this is a owned value!
     // any changes here won't reflect in the schema that is behind a mutex!!
-    let mut database_tables = app_state.schema.lock().unwrap().clone().unwrap();
-    database_tables.iter_mut().for_each(|table| {
-        let table_sensitivity = sensitivities.get(&table.name).unwrap(); // We will for sure have this in the sensitivities
-        table.columns.iter_mut().for_each(|colum| {
-            let field_sensitivity = table_sensitivity.get(&colum.name).unwrap();
-            // We will for sure have sensitivity for this field.
-            println!(
-                "Setting sensitivity for {} to {}",
-                &colum.name, field_sensitivity
-            );
-            colum.sensitivity = field_sensitivity.to_owned();
-        })
-    });
-    // Explicitly change the value behind the mutex!!
     let mut schema = app_state.schema.lock().unwrap();
-    *schema = Some(database_tables);
+    if let Some(database_tables) = schema.as_mut() {
+        database_tables.iter_mut().for_each(|table| {
+            let table_sensitivity = sensitivities.get(&table.name).unwrap(); // We will for sure have this in the sensitivities
+            table.columns.iter_mut().for_each(|column| {
+                let field_sensitivity = table_sensitivity.get(&column.name).unwrap();
+                // We will for sure have sensitivity for this field.
+                println!(
+                    "Setting sensitivity for {} to {}",
+                    &column.name, field_sensitivity
+                );
+                column.sensitivity = field_sensitivity.to_owned();
+            })
+        });
+    }
 }
 
 #[tauri::command]
