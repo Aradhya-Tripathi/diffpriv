@@ -12,5 +12,5 @@ fn add_laplace_noise(true_value: f64, sensitivity: f64, epsilon: f64) -> f64 {
 }
 
 pub fn laplace_transform(true_value: f64, sensitivity: f64, privacy_budget: f64) -> f64 {
-    add_laplace_noise(true_value, sensitivity, privacy_budget)
+    add_laplace_noise(true_value, sensitivity, privacy_budget).round()
 }
