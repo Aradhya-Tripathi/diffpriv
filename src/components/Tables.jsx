@@ -6,6 +6,7 @@ import "../styles/Table.css";
 const Tables = ({ onSet }) => {
   const [tables, setTables] = useState([]);
   const [inputValues, setInputValues] = useState({});
+  const [tableBudgets, setTableBudgets] = useState({});
 
   const get_tables = async () => {
     try {
@@ -41,8 +42,16 @@ const Tables = ({ onSet }) => {
     }));
   };
 
+  const handleBudgetChange = (tableName, budget) => {
+    setTableBudgets((prevBudget) => ({
+      ...prevBudget,
+      [tableName]: budget,
+    }));
+  };
+
   const handleSensitivityInput = async () => {
     const convertedValues = {};
+    const convertedBudgetValues = {};
     for (const table in inputValues) {
       convertedValues[table] = {};
       for (const column in inputValues[table]) {
@@ -50,12 +59,19 @@ const Tables = ({ onSet }) => {
         convertedValues[table][column] = value === "" ? 0.0 : parseFloat(value);
       }
     }
-    console.log(convertedValues);
+    for (let table in tableBudgets) {
+      convertedBudgetValues[table] =
+        tableBudgets[table] === "" ? 0.0 : parseFloat(tableBudgets[table]);
+    }
     try {
-      let msg = await invoke("set_sensitivities", {
+      let sensitivity_msg = await invoke("set_sensitivities", {
         sensitivities: convertedValues,
       });
-      toast.success(msg);
+      toast.success(sensitivity_msg);
+      let budget_message = await invoke("set_budgets", {
+        budgets: convertedBudgetValues,
+      });
+      toast.success(budget_message);
       onSet();
     } catch (err) {
       toast.error(err, { duration: 2000 });
@@ -81,6 +97,17 @@ const Tables = ({ onSet }) => {
                   />
                 </div>
               ))}
+
+              <div className="table-column">
+                <input
+                  type="text"
+                  placeholder="Allowed Budget"
+                  value={tableBudgets[table.name] || ""}
+                  onChange={(e) =>
+                    handleBudgetChange(table.name, e.target.value)
+                  }
+                />
+              </div>
             </div>
           </div>
         ))}

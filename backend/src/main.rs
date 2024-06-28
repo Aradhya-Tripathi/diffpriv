@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
-static ALLOWED_AGGREGATIONS: [&str; 3] = ["sum(", "avg(", "count("];
+static ALLOWED_AGGREGATIONS: [&str; 5] = ["sum(", "avg(", "count(", "min(", "max("];
 
 struct AppState {
     pub connection: Mutex<Option<Database>>,
@@ -62,6 +62,24 @@ fn apply_transforms(
                 })
             })
         })
+        .collect()
+}
+
+/// Determines which columns are used in the query.
+///
+/// # Parameters
+/// - `requested`: A vector of requested table names.
+/// - `existing`: A vector of existing tables in the database.
+///
+/// # Returns
+/// A vector of tables that are used in the query.
+fn get_used_tables(requested: Vec<String>, existing: &Vec<Table>) -> Vec<Table> {
+    // TODO: Fix the case sensitive issues in this since the table in the requested column
+    // Is always going to be lowercase (that's just how the analyzer works either fix that)
+    existing
+        .iter()
+        .filter(|table| requested.contains(&table.name.to_ascii_lowercase()))
+        .map(|table| table.to_owned())
         .collect()
 }
 
@@ -139,23 +157,72 @@ fn execute_sql(
     query: String,
     budget: f64,
 ) -> Result<Vec<HashMap<String, f64>>, String> {
+    let mut has_budget = true;
     let mut database = app_state.connection.lock().unwrap();
     let connection = database.as_mut().unwrap();
-    let schema = app_state.schema.lock().unwrap();
-    let database_tables = schema.as_ref().unwrap();
+    let mut schema = app_state.schema.lock().unwrap();
+    let database_tables = schema.as_mut().unwrap();
 
     let analyzer = analyzer::SqlAnalyzer::new(&query);
     let requested_columns = analyzer.columns_from_sql();
+    let requested_tables = analyzer.tables_from_sql();
     let existing_columns: Vec<Column> = database_tables
         .iter()
         .flat_map(|table| table.columns.clone())
         .collect();
 
     let used_columns = get_used_columns(requested_columns, existing_columns);
-    let query_result = connection.execute_query(&query)?;
+    let used_tables = get_used_tables(requested_tables, database_tables);
 
-    let transformed_query_results = apply_transforms(used_columns, query_result, budget);
-    Ok(transformed_query_results)
+    // Deduct budget from this table
+    for table in database_tables.iter_mut() {
+        used_tables.iter().for_each(|used_table| {
+            if table.name == used_table.name {
+                let message = format!(
+                    "Reducing {} budget from {} to {}",
+                    table.name,
+                    table.privacy_budget,
+                    table.privacy_budget - budget,
+                );
+                println!("{message}");
+                table.privacy_budget -= budget;
+            }
+        });
+    }
+
+    // Check here if the tables that are being used have enough budget to execute this query
+    database_tables.iter().for_each(|table| {
+        if table.privacy_budget <= 0.0 {
+            has_budget = false;
+        }
+    });
+    if has_budget {
+        let query_result = connection.execute_query(&query)?;
+        let transformed_query_results = apply_transforms(used_columns, query_result, budget);
+        return Ok(transformed_query_results);
+    }
+    Err("Insufficient budget!".to_string())
+}
+
+/// Sets the allowed privacy budget for each column after which no more queries are processed for that column
+///
+/// # Parameters
+/// - `app_state`: The shared application state containing the database connection and schema.
+/// - `budgets`: A hashmap of table names to table budgets.
+#[tauri::command]
+fn set_budgets(
+    app_state: State<'_, Arc<AppState>>,
+    budgets: HashMap<String, f64>,
+) -> Result<String, String> {
+    let mut schema = app_state.schema.lock().unwrap();
+    if let Some(database_tables) = schema.as_mut() {
+        database_tables.iter_mut().for_each(|table| {
+            let budget = budgets.get(&table.name).unwrap_or(&0.0).to_owned();
+            table.privacy_budget = budget;
+        });
+        return Ok("Set table budget!".to_string());
+    }
+    Err("Unable to establish connection with the database!".to_string())
 }
 
 /// Sets the sensitivities for columns in the database schema.
@@ -252,6 +319,7 @@ fn main() {
             execute_sql,
             reset_sensitivities,
             reset_connection,
+            set_budgets,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
