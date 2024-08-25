@@ -2,12 +2,21 @@ use rand::Rng;
 
 fn laplace_sample(location: f64, scale: f64) -> f64 {
     let mut rng = rand::thread_rng();
-    let u: f64 = rng.gen_range(-0.5..0.5);
-    location - scale * u.signum() * (1.0 - 2.0 * u.abs()).ln() // Formula for laplace sample
+    let u: f64 = rng.gen_range(0.0..1.0); // Uniformly distributed variable in range (0, 1)
+
+    // Apply the inverse CDF method
+    let laplace_sample = if u < 0.5 {
+        location + scale * (u).ln() // Negative side
+    } else {
+        location - scale * (1.0 - u).ln() // Positive side
+    };
+
+    laplace_sample
 }
 
 fn add_laplace_noise(true_value: f64, sensitivity: f64, epsilon: f64) -> f64 {
-    let noise = laplace_sample(0.0, sensitivity / epsilon);
+    let scale = sensitivity / epsilon;
+    let noise = laplace_sample(0.0, scale);
     true_value + noise
 }
 

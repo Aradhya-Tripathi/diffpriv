@@ -162,7 +162,7 @@ fn execute_sql(
     let connection = database.as_mut().unwrap();
     let mut schema = app_state.schema.lock().unwrap();
     let database_tables = schema.as_mut().unwrap();
-
+    println!("{:?}", &query);
     let analyzer = analyzer::SqlAnalyzer::new(&query);
     let requested_columns = analyzer.columns_from_sql();
     let requested_tables = analyzer.tables_from_sql();

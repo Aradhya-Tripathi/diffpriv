@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api";
 import { useState, useEffect } from "react";
-import { registerAll, register } from "@tauri-apps/api/globalShortcut";
+import { register } from "@tauri-apps/api/globalShortcut";
 import ConfigForm from "./components/ConfigForm";
 import Tables from "./components/Tables";
 import "./styles/App.css";
