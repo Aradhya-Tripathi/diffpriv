@@ -141,6 +141,10 @@ fn reset_connection(app_state: State<'_, Arc<AppState>>) {
     *database = None;
 }
 
+fn sanitize_input(input: &str) -> String {
+    input.replace("“", "\"").replace("”", "\"")
+}
+
 /// Executes an SQL query with differential privacy applied.
 ///
 /// # Parameters
@@ -157,12 +161,12 @@ fn execute_sql(
     query: String,
     budget: f64,
 ) -> Result<Vec<HashMap<String, f64>>, String> {
+    let sanitized_query = sanitize_input(query.as_str());
     let mut has_budget = true;
     let mut database = app_state.connection.lock().unwrap();
     let connection = database.as_mut().unwrap();
     let mut schema = app_state.schema.lock().unwrap();
     let database_tables = schema.as_mut().unwrap();
-    println!("{:?}", &query);
     let analyzer = analyzer::SqlAnalyzer::new(&query);
     let requested_columns = analyzer.columns_from_sql();
     let requested_tables = analyzer.tables_from_sql();
@@ -170,7 +174,6 @@ fn execute_sql(
         .iter()
         .flat_map(|table| table.columns.clone())
         .collect();
-
     let used_columns = get_used_columns(requested_columns, existing_columns);
     let used_tables = get_used_tables(requested_tables, database_tables);
 
@@ -191,13 +194,13 @@ fn execute_sql(
     }
 
     // Check here if the tables that are being used have enough budget to execute this query
-    database_tables.iter().for_each(|table| {
+    used_tables.iter().for_each(|table| {
         if table.privacy_budget <= 0.0 {
             has_budget = false;
         }
     });
     if has_budget {
-        let query_result = connection.execute_query(&query)?;
+        let query_result = connection.execute_query(&sanitized_query)?;
         let transformed_query_results = apply_transforms(used_columns, query_result, budget);
         return Ok(transformed_query_results);
     }

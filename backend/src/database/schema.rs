@@ -55,13 +55,16 @@ impl Schema {
                 AND TABLE_NAME = '{name}';"
             );
             let columns = connector
-                .query_map(column_query, |(column_name, data_type)| Column {
-                    name: column_name,
-                    ctype: data_type,
-                    sensitivity: 0.0, // To be decided!
-                    usage: None,
-                    table_name: name.clone(),
-                })
+                .query_map(
+                    column_query,
+                    |(column_name, data_type): (String, String)| Column {
+                        name: column_name,
+                        ctype: data_type,
+                        sensitivity: 0.0, // To be decided!
+                        usage: None,
+                        table_name: name.clone(),
+                    },
+                )
                 .unwrap();
             tables.push(Table {
                 name,

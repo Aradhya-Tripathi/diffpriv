@@ -9,7 +9,10 @@ fake = Faker(["en_IN", "it_IT", "en_US", "ja_JP"])
 def main():
     path = "./test-random.db"
     n_samples = 10000
-    table_name = "Users"
+    table_names = {
+        "Users": ["userId Integer", "age Integer", "salary Integer"],
+        "Medical": ["patientId Integer", "bloodPressure Integer", "weight Integer"],
+    }
     data = []
     try:
         n_samples = int(sys.argv[1])
@@ -17,12 +20,13 @@ def main():
     except (IndexError, ValueError):
         n_samples = 10000
 
-    conn = sqlite3.connect(path)
-    conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-    conn.execute(
-        f"CREATE TABLE {table_name} (name TEXT, age Integer, company TEXT, salary Integer)"
-    )
-    conn.commit()
+    for table, columns in table_names.items():
+        conn = sqlite3.connect(path)
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+        columns = f"({', '.join(columns)})"
+        print(f"CREATE TABLE {table} {columns}")
+        conn.execute(f"CREATE TABLE {table} {columns}")
+        conn.commit()
 
     print(f"Using {n_samples} samples")
 
@@ -30,15 +34,21 @@ def main():
         data.extend(
             [
                 (
-                    fake.name(),
+                    fake.iana_id(),
                     random.randint(5, 80),
-                    fake.company(),
                     random.randint(10_000, 100_00_000),
                 )
             ]
         )
 
-    conn.executemany(f"INSERT INTO {table_name} VALUES (?, ?, ?, ?)", data)
+    conn.executemany(f"INSERT INTO Users VALUES (?, ?, ?)", data)
+    conn.commit()
+    data = []
+    for _ in range(n_samples):
+        data.extend(
+            [(fake.iana_id(), random.randint(120, 200), random.randint(40, 120))]
+        )
+    conn.executemany(f"INSERT INTO Medical VALUES (?, ?, ?)", data)
     conn.commit()
     conn.close()
 

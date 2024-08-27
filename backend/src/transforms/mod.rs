@@ -17,6 +17,12 @@ fn laplace_sample(location: f64, scale: f64) -> f64 {
 fn add_laplace_noise(true_value: f64, sensitivity: f64, epsilon: f64) -> f64 {
     let scale = sensitivity / epsilon;
     let noise = laplace_sample(0.0, scale);
+    println!(
+        "Changing {} to {} using {}",
+        true_value,
+        true_value + noise,
+        epsilon
+    );
     true_value + noise
 }
 
